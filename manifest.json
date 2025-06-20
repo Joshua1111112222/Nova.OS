@@ -1,0 +1,19 @@
+{
+    "//": "This file defines how the app should behave when installed on a device.",
+
+    "name": "Nova.OS",
+    "short_name": "Nova.OS",
+    "icons": [
+        {
+            "src": "images/logo.png",
+            "sizes": "500x500",
+            "type": "image/png"
+        }
+    ],
+    "start_url": "./index.html",
+    "display": "fullscreen",
+    "orientation": "portrait",
+    "background_color": "#170032",
+    "description": "A new OS",
+    "theme_color": "#170032"
+}

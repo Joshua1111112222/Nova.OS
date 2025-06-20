@@ -1,0 +1,59 @@
+∅.OS
+
+START set main loading bar
+
+default_apps = ["chrome","messages","terminal","settings"]
+home_apps    = []
+total_apps = 0
+open_apps    = []
+current_view = {mode:"home",view:"none"} | {mode:"app-choose",view:loc_of_app_in_open_apps} | {mode:"app",view:
+
+localhost("installed_apps")
+	-> ["settings","messages"]
+		-> "./settings/
+		-> "app.js"
+			-> export app, app_name
+			-> icon.png
+
+main
+	background (just plain blue for now)
+	<app-main>
+	<app-bar>
+
+for_every_app_in_default_apps
+	load ./${app}/app.js
+	into <app-bar>
+		load ./${app}/icon.png
+		onclick = doc.appendChild(app_name)        // OF TYPE app-item
+		open_apps.push {app_elem:app-element,name:app-name}
+	total_apps++
+	total_apps.length == default_apps.length?
+		yes run for_every_app_in_localhost
+		else set load bar += (total_apps/[localhost.length + default_apps.length])*length
+
+for_every_app_in_localhost
+	load ./${app}/app.js
+	into <app-main>
+		load ./${app}/icon.png
+		onclick = doc.appendChild(app_name)
+		open_apps.push {app_elem:app-element,name:app-name}
+	is_home_apps_list.length == localhost.length?
+		yes run main
+		else set load bar += 
+
+each_open_app
+	<app-container>
+		app-element
+	*has reference in open_app_list
+		{app_elem:app-element,name:app-name}
+
+
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Ø.OS">
+<meta name="theme-color" content="#170032">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="./images/icon.png">
+<link rel="manifest" href="./manifest.json">
+<meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1.0">

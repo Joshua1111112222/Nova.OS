@@ -1,0 +1,2 @@
+export const items = ["app-bar","app-main","main-home","app-container","app-item","app-icon","swipe-up","transparent-overlay","move-right","move-left","select-app-number","install-as-app-overlay"]
+_create_containers(items);

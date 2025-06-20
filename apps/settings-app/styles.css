@@ -1,0 +1,47 @@
+h1 {
+	color:white;
+	font-family:'Open Sans';
+	font-size:30px;
+	text-align:center;
+	margin-top:50px;
+	font-weight:1;
+}
+p {
+	color:white;
+	font-family:'Open Sans';
+	font-size:10px;
+	text-align:center;
+}
+div {
+	position:absolute;
+	top:0px;
+	left:0px;
+	background-color:rgb(10,10,10);
+	width:100vw;
+	height:100vh;
+	display:flex;
+	justify-content:flex-start;
+	align-items:center;
+	flex-direction:column;
+}
+.input {
+	width:fit-content;
+	box-sizing:border-box;
+	height:50px;
+	background-color:rgba(255, 255, 255, 0.203);
+	border-radius:25px;
+	border:none;
+	outline:none;
+	padding:10px;
+	text-align:center;
+	color:white;
+	font-family:monospace;
+}
+option {
+	background-color:rgb(64, 64, 64);
+	color:white;
+	font-family:monospace;
+}
+:host {
+	background-color:black;
+}

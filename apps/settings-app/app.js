@@ -6,6 +6,8 @@ export const app = _component("settings-app",html`
 		<input type="text" id="app-bar-background-color" class='input'>
 		<p>Background Image:</p>
 		<select id="wallpaper-image" class='input'>
+			<option>nova.png</option>
+			<option>wallpaper_old.png</option>
 			<option>glowing_bars.jpg</option>
 			<option>pink_swirl.png</option>
 			<option>turquoise_swirl.jpg</option>

@@ -9,7 +9,7 @@ export let loading_bar = {
 	},
 }
 _component("loading-bar",html`
-	<h1>&#xd8;.OS</h1>
+	<h1>Nova.OS</h1>
 	<div>
 		<span></span>
 	</div>

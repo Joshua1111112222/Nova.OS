@@ -219,6 +219,30 @@ function boot_up_app(app) {
     errorMessage.textContent = "";
   }
 
+  // Ensure the keyboard doesn't overlap the input area
+function adjustForKeyboard() {
+    const inputArea = app.querySelector("input-area");
+    const conversationArea = app.querySelector("conversation-area");
+  
+    // Adjust layout when the keyboard is shown
+    window.addEventListener("resize", () => {
+      const isKeyboardVisible = window.innerHeight < screen.height * 0.8; // Detect if keyboard is visible
+      if (isKeyboardVisible) {
+        inputArea.style.position = "absolute";
+        inputArea.style.bottom = "0";
+        inputArea.style.width = "100%";
+        conversationArea.style.paddingBottom = `${inputArea.offsetHeight}px`; // Prevent overlap
+      } else {
+        inputArea.style.position = "relative";
+        inputArea.style.bottom = "unset";
+        conversationArea.style.paddingBottom = "0";
+      }
+    });
+  }
+  
+  // Call the function to handle keyboard adjustments
+  adjustForKeyboard();
+
   // On load, always show login (no session token)
   hideApp();
 }

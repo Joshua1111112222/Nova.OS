@@ -1,0 +1,89 @@
+/* General styles for the app */
+main-area {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background-color: #121212; /* Dark background */
+    font-family: Arial, sans-serif;
+    color: #FFFFFF; /* Light text for dark mode */
+}
+
+/* Header styles */
+header-title {
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+    padding: 10px;
+    background-color: #1E1E1E; /* Slightly lighter dark background */
+    color: #FFFFFF;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Conversation area styles */
+conversation-area {
+    flex: 1;
+    padding: 10px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background-color: #1E1E1E; /* Slightly lighter dark background */
+    border-top: 1px solid #333333;
+}
+
+/* Message bubble styles */
+.message {
+    max-width: 70%;
+    padding: 10px;
+    border-radius: 15px;
+    font-size: 14px;
+    line-height: 1.5;
+    word-wrap: break-word;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.message.sent {
+    align-self: flex-end;
+    background-color: #007AFF; /* Blue for sent messages */
+    color: white;
+}
+
+.message.received {
+    align-self: flex-start;
+    background-color: #333333; /* Gray for received messages */
+    color: white;
+}
+
+/* Input area styles */
+input-area {
+    display: flex;
+    padding: 10px;
+    background-color: #1E1E1E; /* Slightly lighter dark background */
+    border-top: 1px solid #333333;
+}
+
+input[type="text"] {
+    flex: 1;
+    padding: 10px;
+    font-size: 14px;
+    border: 1px solid #555555;
+    border-radius: 20px;
+    background-color: #121212; /* Dark input background */
+    color: white;
+    outline: none;
+}
+
+button {
+    margin-left: 10px;
+    padding: 10px 20px;
+    font-size: 14px;
+    border: none;
+    border-radius: 20px;
+    background-color: #007AFF; /* Blue for send button */
+    color: white;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #005BB5; /* Darker blue on hover */
+}

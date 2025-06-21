@@ -22,7 +22,7 @@ function boot_up_app(app) {
     const canvas = document.createElement("canvas");
     canvas.id = "flappyCanvas";
     canvas.width = 400;
-    canvas.height = 600;
+    canvas.height = 1000;
     gameArea.appendChild(canvas);
 
     // Append the main area to the app

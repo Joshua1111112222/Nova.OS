@@ -29,6 +29,9 @@ function boot_up_app(app) {
             messageBubble.textContent = msg.text;
             conversationArea.appendChild(messageBubble);
         });
+
+        // Scroll to the bottom of the conversation area
+        conversationArea.scrollTop = conversationArea.scrollHeight;
     }
 
     // Function to fetch messages from the backend
@@ -76,6 +79,9 @@ function boot_up_app(app) {
             sendMessage();
         }
     });
+
+    // Polling to fetch new messages periodically (chatroom functionality)
+    setInterval(fetchMessages, 3000); // Fetch messages every 3 seconds
 
     // Initial fetch of messages
     fetchMessages();

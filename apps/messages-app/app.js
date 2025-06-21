@@ -295,6 +295,117 @@ function boot_up_app(app) {
     });
   }
 
+  // Add a flag to track whether editing is in progress
+let isEditingMessage = false;
+
+// Start editing a message
+function startEditingMessage(msg, messageBubble, messageText, btnContainer) {
+  // Set the editing flag to true
+  isEditingMessage = true;
+
+  // Hide text and buttons
+  messageText.style.display = "none";
+  btnContainer.style.display = "none";
+
+  // Create edit textarea
+  const editTextarea = document.createElement("textarea");
+  editTextarea.className = "edit-input";
+  editTextarea.value = msg.text;
+  editTextarea.rows = 2;
+
+  // Create save and cancel buttons
+  const controls = document.createElement("div");
+  controls.className = "edit-controls";
+
+  const saveBtn = document.createElement("button");
+  saveBtn.className = "msg-btn";
+  saveBtn.textContent = "Save";
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.className = "msg-btn";
+  cancelBtn.textContent = "Cancel";
+
+  controls.appendChild(saveBtn);
+  controls.appendChild(cancelBtn);
+
+  messageBubble.appendChild(editTextarea);
+  messageBubble.appendChild(controls);
+
+  saveBtn.addEventListener("click", async () => {
+    const newText = editTextarea.value.trim();
+    if (!newText) {
+      alert("Message cannot be empty.");
+      return;
+    }
+    const authUsername = user;
+    const authPassword = isAdmin ? adminPassword : passwordInput.value;
+    if (!authPassword && !isAdmin) {
+      alert("Password required to edit message.");
+      return;
+    }
+    try {
+      const res = await fetch(`${backendUrl}/edit_message`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: authUsername,
+          password: authPassword,
+          message_id: msg.id,
+          new_text: newText,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        msg.text = newText;
+        renderMessages(messages);
+      } else {
+        alert(data.error || "Failed to edit message.");
+      }
+    } catch {
+      alert("Network error.");
+    } finally {
+      // Reset the editing flag and resume refreshing
+      isEditingMessage = false;
+    }
+  });
+
+  cancelBtn.addEventListener("click", () => {
+    editTextarea.remove();
+    controls.remove();
+    messageText.style.display = "";
+    btnContainer.style.display = "";
+    // Reset the editing flag and resume refreshing
+    isEditingMessage = false;
+  });
+}
+
+// Update the fetchMessages function to respect the editing flag
+async function fetchMessages() {
+  if (isEditingMessage) return; // Skip refreshing if editing is in progress
+
+  try {
+    const response = await fetch(`${backendUrl}/messages`);
+    const data = await response.json();
+    if (response.ok && data) {
+      messages = data;
+      localStorage.setItem("nova-messages", JSON.stringify(data));
+      renderMessages(data);
+    } else {
+      const cached = localStorage.getItem("nova-messages");
+      if (cached) {
+        messages = JSON.parse(cached);
+        renderMessages(messages);
+      }
+    }
+  } catch {
+    const cached = localStorage.getItem("nova-messages");
+    if (cached) {
+      messages = JSON.parse(cached);
+      renderMessages(messages);
+    }
+  }
+}
+
   // Delete a message
   async function deleteMessage(messageId) {
     const isOwnMessage = messages.find((m) => m.id === messageId)?.user === user;

@@ -1,33 +1,57 @@
+export const app_name = "messages-app";
+
 export const app = _component("messages-app", html`
-    <link rel="stylesheet" type="text/css" href="./apps/messages-app/styles.css">
-  
-    <!-- LOGIN / REGISTER SCREEN -->
-    <div id="loginScreen" class="login-container">
-      <!-- unchanged -->
+  <link rel="stylesheet" type="text/css" href="./apps/messages-app/styles.css">
+
+  <!-- LOGIN / REGISTER SCREEN -->
+  <div id="loginScreen" class="login-container">
+    <div class="login-box">
+      <h2 id="formTitle">Login</h2>
+      <div id="errorMessage"></div>
+
+      <label for="usernameInput">Username</label>
+      <input id="usernameInput" type="text" placeholder="Enter username" autocomplete="username" />
+
+      <label for="passwordInput">Password</label>
+      <input id="passwordInput" type="password" placeholder="Enter password" autocomplete="current-password" />
+
+      <button id="submitBtn">Login</button>
+
+      <div class="login-toggle" id="toggleForm">
+        Don't have an account? <span class="toggle-link">Register here</span>
+      </div>
     </div>
-  
-    <!-- MESSAGES APP -->
-    <main-area style="display:none;">
-      <header-title>
-        Messages
-        <button id="logoutButton" title="Logout">Logout</button>
-        <button id="adminPanelButton" title="Admin Panel" style="display:none;">Admin</button>
-      </header-title>
-  
-      <conversation-area></conversation-area>
-  
-      <input-area>
-        <textarea id="messageInput" placeholder="Type a message..." autocomplete="off" rows="1"></textarea>
-        <button id="sendButton">Send</button>
-      </input-area>
-  
-      <div id="progressBar"></div>
-    </main-area>
-  `, boot_up_app);
-  
+  </div>
+
+  <!-- MESSAGES APP -->
+  <main-area style="display:none;">
+    <header-title>
+      Messages
+      <button id="logoutButton" title="Logout">Logout</button>
+      <button id="adminPanelButton" title="Admin Panel" style="display:none;">Admin</button>
+    </header-title>
+
+    <conversation-area></conversation-area>
+
+    <input-area>
+      <textarea id="messageInput" placeholder="Type a message..." autocomplete="off" rows="1"></textarea>
+      <button id="sendButton">Send</button>
+    </input-area>
+
+    <div id="progressBar"></div>
+  </main-area>
+
+  <!-- ADMIN PANEL MODAL -->
+  <div id="adminPanel" style="display:none; position: fixed; top:10%; left: 50%; transform: translateX(-50%); background:#222; color:#eee; padding: 20px; border-radius: 8px; max-width: 90vw; max-height: 80vh; overflow-y: auto; z-index: 10000;">
+    <h3>Admin Panel</h3>
+    <button id="closeAdminPanel" style="float:right; background:#f44336; border:none; color:#fff; font-weight:bold; cursor:pointer;">X</button>
+    <h4>Users</h4>
+    <ul id="userList" style="list-style:none; padding:0;"></ul>
+    <button id="deleteAllMessagesBtn" style="margin-top: 10px; background:#b22222; color:white; border:none; padding: 8px 12px; cursor:pointer;">Delete All Messages</button>
+  </div>
+`, boot_up_app);
 
 function boot_up_app(app) {
-  // Elements
   const loginScreen = app.querySelector("#loginScreen");
   const formTitle = app.querySelector("#formTitle");
   const errorMessage = app.querySelector("#errorMessage");
@@ -43,40 +67,18 @@ function boot_up_app(app) {
   const sendButton = app.querySelector("#sendButton");
   const progressBar = app.querySelector("#progressBar");
 
+  // Admin panel elements
+  const adminPanel = document.getElementById("adminPanel");
+  const closeAdminPanel = document.getElementById("closeAdminPanel");
+  const userList = document.getElementById("userList");
+  const deleteAllMessagesBtn = document.getElementById("deleteAllMessagesBtn");
+
   const backendUrl = "https://nova-os-messaging-backend.onrender.com";
 
   let isLogin = true;
   let user = null;
-
-  function adjustForKeyboardAndExpand() {
-    const inputArea = app.querySelector("input-area");
-    const messageInput = app.querySelector("#messageInput");
-    const conversationArea = app.querySelector("conversation-area");
-  
-    // Auto-expand textarea
-    messageInput.addEventListener("input", () => {
-      messageInput.style.height = "auto";
-      messageInput.style.height = `${messageInput.scrollHeight}px`;
-    });
-  
-    // Prevent keyboard from covering input
-    window.addEventListener("resize", () => {
-      const isKeyboard = window.innerHeight < screen.height * 0.75;
-      if (isKeyboard) {
-        inputArea.style.position = "fixed";
-        inputArea.style.bottom = "0";
-        inputArea.style.zIndex = "1000";
-        conversationArea.style.paddingBottom = `${inputArea.offsetHeight + 10}px`;
-      } else {
-        inputArea.style.position = "fixed";
-        inputArea.style.bottom = "0";
-        conversationArea.style.paddingBottom = "0";
-      }
-    });
-  }
-  
-  adjustForKeyboardAndExpand();
-  
+  let isAdmin = false;
+  let adminPassword = null; // stored temporarily after login for admin calls
 
   // Show error helper
   function showError(text) {
@@ -99,10 +101,9 @@ function boot_up_app(app) {
       toggleForm.innerHTML = `Already have an account? <span class="toggle-link">Login here</span>`;
     }
   }
-
   toggleForm.addEventListener("click", toggleLoginRegister);
 
-  // Render messages in conversation area
+  // Render messages
   function renderMessages(messages) {
     conversationArea.innerHTML = "";
     messages.forEach((msg) => {
@@ -114,7 +115,7 @@ function boot_up_app(app) {
     conversationArea.scrollTop = conversationArea.scrollHeight;
   }
 
-  // Fetch messages (no auth header needed)
+  // Fetch messages
   async function fetchMessages() {
     try {
       const response = await fetch(`${backendUrl}/messages`);
@@ -132,7 +133,7 @@ function boot_up_app(app) {
     }
   }
 
-  // Send message with { user, text }
+  // Send message
   async function sendMessage() {
     const text = messageInput.value.trim();
     if (!text || !user) return;
@@ -164,7 +165,7 @@ function boot_up_app(app) {
     }
   }
 
-  // Login or register user
+  // Login or register
   async function submitAuth() {
     showError("");
     const username = usernameInput.value.trim();
@@ -178,37 +179,37 @@ function boot_up_app(app) {
     const endpoint = isLogin ? "/login" : "/register";
 
     try {
-        const res = await fetch(`${backendUrl}${endpoint}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password }),
-        });
-        const data = await res.json();
-      
-        if (data.success) {
-          if (isLogin) {
-            user = data.username;
-            const isAdmin = data.admin === true;
-            localStorage.setItem("nova-user", user);
-            localStorage.setItem("nova-is-admin", isAdmin ? "true" : "false");
-            showApp();
-          } else {
-            showError("Registration successful! You can now log in.");
-            toggleLoginRegister();
-          }
-        }
-        } catch (error) {
-          console.error("Error during authentication:", error);
-          showError("An error occurred. Please try again.");
-        }
-      } // Closing brace for submitAuth function
-        
-      // Ensure event listeners are added outside the try block
-      submitBtn.addEventListener("click", submitAuth);
-      passwordInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") submitAuth();
+      const res = await fetch(`${backendUrl}${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
       });
+      const data = await res.json();
 
+      if (data.success) {
+        if (isLogin) {
+          user = data.username;
+          isAdmin = data.admin === true;
+          if (isAdmin) {
+            adminPassword = password; // store admin password for admin API calls
+            adminPanelButton.style.display = "inline-block";
+          } else {
+            adminPanelButton.style.display = "none";
+          }
+          localStorage.setItem("nova-user", user);
+          localStorage.setItem("nova-is-admin", isAdmin ? "true" : "false");
+          showApp();
+        } else {
+          showError("Registration successful! You can now log in.");
+          toggleLoginRegister();
+        }
+      } else {
+        showError(data.error || "Operation failed.");
+      }
+    } catch {
+      showError("Network error.");
+    }
+  }
   submitBtn.addEventListener("click", submitAuth);
   passwordInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") submitAuth();
@@ -216,12 +217,107 @@ function boot_up_app(app) {
 
   sendButton.addEventListener("click", sendMessage);
   messageInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") sendMessage();
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
   });
 
   logoutButton.addEventListener("click", () => {
     user = null;
+    isAdmin = false;
+    adminPassword = null;
+    adminPanelButton.style.display = "none";
     hideApp();
+  });
+
+  // Admin panel functionality
+  adminPanelButton.addEventListener("click", () => {
+    loadUsers();
+    adminPanel.style.display = "block";
+  });
+
+  closeAdminPanel.addEventListener("click", () => {
+    adminPanel.style.display = "none";
+  });
+
+  async function loadUsers() {
+    userList.innerHTML = "<li>Loading...</li>";
+    try {
+      const response = await fetch(`${backendUrl}/admin/list_users?admin_username=admin&admin_password=${encodeURIComponent(adminPassword)}`);
+      const data = await response.json();
+      if (response.success === false || !Array.isArray(data)) {
+        userList.innerHTML = `<li>Error: ${data.error || "Failed to load users"}</li>`;
+        return;
+      }
+      userList.innerHTML = "";
+      data.forEach((username) => {
+        if (username === "admin") return; // Don't show admin for deletion
+        const li = document.createElement("li");
+        li.style.marginBottom = "6px";
+        li.textContent = username + " ";
+        const delBtn = document.createElement("button");
+        delBtn.textContent = "Delete";
+        delBtn.style.marginLeft = "10px";
+        delBtn.style.background = "#b22222";
+        delBtn.style.color = "white";
+        delBtn.style.border = "none";
+        delBtn.style.cursor = "pointer";
+        delBtn.addEventListener("click", () => deleteUser(username));
+        li.appendChild(delBtn);
+        userList.appendChild(li);
+      });
+    } catch (e) {
+      userList.innerHTML = `<li>Error loading users</li>`;
+    }
+  }
+
+  async function deleteUser(usernameToDelete) {
+    if (!confirm(`Are you sure you want to delete user "${usernameToDelete}"? This will delete all their messages.`)) return;
+    try {
+      const response = await fetch(`${backendUrl}/admin/delete_user`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          admin_username: "admin",
+          admin_password: adminPassword,
+          username: usernameToDelete,
+        }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        alert(`User "${usernameToDelete}" deleted.`);
+        loadUsers();
+        fetchMessages();
+      } else {
+        alert(data.error || "Failed to delete user.");
+      }
+    } catch {
+      alert("Network error.");
+    }
+  }
+
+  deleteAllMessagesBtn.addEventListener("click", async () => {
+    if (!confirm("Are you sure you want to delete ALL messages? This cannot be undone.")) return;
+    try {
+      const response = await fetch(`${backendUrl}/admin/delete_all_messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          admin_username: "admin",
+          admin_password: adminPassword,
+        }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        alert("All messages deleted.");
+        fetchMessages();
+      } else {
+        alert(data.error || "Failed to delete messages.");
+      }
+    } catch {
+      alert("Network error.");
+    }
   });
 
   // Show messages app, hide login
@@ -241,29 +337,35 @@ function boot_up_app(app) {
     errorMessage.textContent = "";
   }
 
-  // Ensure the keyboard doesn't overlap the input area
-function adjustForKeyboard() {
+  // Adjust keyboard and textarea resizing
+  function adjustForKeyboardAndExpand() {
     const inputArea = app.querySelector("input-area");
     const conversationArea = app.querySelector("conversation-area");
-  
-    // Adjust layout when the keyboard is shown
+
+    // Auto-expand textarea
+    messageInput.style.height = "auto";
+    messageInput.addEventListener("input", () => {
+      messageInput.style.height = "auto";
+      messageInput.style.height = `${messageInput.scrollHeight}px`;
+    });
+
+    // Prevent keyboard covering input on mobile
     window.addEventListener("resize", () => {
-      const isKeyboardVisible = window.innerHeight < screen.height * 0.8; // Detect if keyboard is visible
-      if (isKeyboardVisible) {
-        inputArea.style.position = "absolute";
+      const isKeyboard = window.innerHeight < screen.height * 0.75;
+      if (isKeyboard) {
+        inputArea.style.position = "fixed";
         inputArea.style.bottom = "0";
-        inputArea.style.width = "100%";
-        conversationArea.style.paddingBottom = `${inputArea.offsetHeight}px`; // Prevent overlap
+        inputArea.style.zIndex = "1000";
+        conversationArea.style.paddingBottom = `${inputArea.offsetHeight + 10}px`;
       } else {
-        inputArea.style.position = "relative";
-        inputArea.style.bottom = "unset";
+        inputArea.style.position = "fixed";
+        inputArea.style.bottom = "0";
         conversationArea.style.paddingBottom = "0";
       }
     });
   }
-  
-// Call the function to handle keyboard adjustments
-adjustForKeyboard();
+  adjustForKeyboardAndExpand();
 
-// On load, always show login (no session token)
-hideApp();}
+  // On load always show login
+  hideApp();
+}

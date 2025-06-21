@@ -1,6 +1,6 @@
 export const app_name = "messages-app";
 
-export const app = _component("messagesapp", html`
+export const app = _component("messages-app", html`
   <link rel="stylesheet" type="text/css" href="./apps/messages-app/styles.css">
 
   <!-- LOGIN / REGISTER SCREEN -->
@@ -64,12 +64,11 @@ function boot_up_app(app) {
   const sendButton = app.querySelector("#sendButton");
   const progressBar = app.querySelector("#progressBar");
 
-  // ** Now fixing the scope: global DOM queries for admin panel **
-  const adminPanel = document.getElementById("adminPanel");
+  // Admin panel elements (inside component scope)
+  const adminPanel = app.querySelector("#adminPanel");
   const closeAdminPanel = app.querySelector("#closeAdminPanel");
-const userList = app.querySelector("#userList");
-const deleteAllMessagesBtn = app.querySelector("#deleteAllMessagesBtn");
-
+  const userList = app.querySelector("#userList");
+  const deleteAllMessagesBtn = app.querySelector("#deleteAllMessagesBtn");
 
   const backendUrl = "https://nova-os-messaging-backend.onrender.com";
 
@@ -78,7 +77,9 @@ const deleteAllMessagesBtn = app.querySelector("#deleteAllMessagesBtn");
   let isAdmin = false;
   let adminPassword = null;
 
-  function showError(text) { errorMessage.textContent = text; }
+  function showError(text) {
+    errorMessage.textContent = text;
+  }
 
   function toggleLoginRegister() {
     isLogin = !isLogin;
@@ -95,20 +96,26 @@ const deleteAllMessagesBtn = app.querySelector("#deleteAllMessagesBtn");
 
   function renderMessages(messages) {
     conversationArea.innerHTML = "";
-    messages.forEach(msg => {
-      const div = document.createElement("div");
-      div.className = msg.user === user ? "message sent" : "message received";
-      div.textContent = `${msg.user}: ${msg.text}`;
-      conversationArea.appendChild(div);
+    messages.forEach((msg) => {
+      const messageBubble = document.createElement("div");
+      messageBubble.className = msg.user === user ? "message sent" : "message received";
+      messageBubble.textContent = `${msg.user}: ${msg.text}`;
+      conversationArea.appendChild(messageBubble);
     });
     conversationArea.scrollTop = conversationArea.scrollHeight;
   }
 
   async function fetchMessages() {
     try {
-      const res = await fetch(`${backendUrl}/messages`);
-      const data = await res.json();
-      renderMessages(data);
+      const response = await fetch(`${backendUrl}/messages`);
+      const data = await response.json();
+      if (response.ok && data) {
+        localStorage.setItem("nova-messages", JSON.stringify(data));
+        renderMessages(data);
+      } else {
+        const cached = localStorage.getItem("nova-messages");
+        if (cached) renderMessages(JSON.parse(cached));
+      }
     } catch {
       const cached = localStorage.getItem("nova-messages");
       if (cached) renderMessages(JSON.parse(cached));
@@ -120,18 +127,25 @@ const deleteAllMessagesBtn = app.querySelector("#deleteAllMessagesBtn");
     if (!text || !user) return;
 
     progressBar.style.width = "30%";
+
     try {
-      const res = await fetch(`${backendUrl}/messages`, {
+      const response = await fetch(`${backendUrl}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user, text }),
       });
+
       progressBar.style.width = "60%";
-      if (res.ok) {
+
+      if (response.ok) {
         messageInput.value = "";
         await fetchMessages();
         progressBar.style.width = "100%";
-        setTimeout(() => progressBar.style.width = "0%", 500);
+        setTimeout(() => (progressBar.style.width = "0%"), 500);
+      } else {
+        const err = await response.json();
+        alert(err.error || "Failed to send message.");
+        progressBar.style.width = "0%";
       }
     } catch {
       alert("Connection error.");
@@ -143,9 +157,14 @@ const deleteAllMessagesBtn = app.querySelector("#deleteAllMessagesBtn");
     showError("");
     const username = usernameInput.value.trim();
     const password = passwordInput.value.trim();
-    if (!username || !password) { showError("Username and password required"); return; }
+
+    if (!username || !password) {
+      showError("Please enter username and password.");
+      return;
+    }
 
     const endpoint = isLogin ? "/login" : "/register";
+
     try {
       const res = await fetch(`${backendUrl}${endpoint}`, {
         method: "POST",
@@ -153,28 +172,38 @@ const deleteAllMessagesBtn = app.querySelector("#deleteAllMessagesBtn");
         body: JSON.stringify({ username, password }),
       });
       const data = await res.json();
+
       if (data.success) {
         if (isLogin) {
           user = data.username;
           isAdmin = data.admin === true;
-          adminPassword = isAdmin ? password : null;
-          adminPanelButton.style.display = isAdmin ? "inline-block" : "none";
+          if (isAdmin) {
+            adminPassword = password; // store admin password for admin API calls
+            adminPanelButton.style.display = "inline-block";
+          } else {
+            adminPanelButton.style.display = "none";
+          }
+          localStorage.setItem("nova-user", user);
+          localStorage.setItem("nova-is-admin", isAdmin ? "true" : "false");
           showApp();
         } else {
-          showError("Registration successful, please login.");
+          showError("Registration successful! You can now log in.");
           toggleLoginRegister();
         }
-      } else showError(data.error || "Operation failed.");
+      } else {
+        showError(data.error || "Operation failed.");
+      }
     } catch {
       showError("Network error.");
     }
   }
-
   submitBtn.addEventListener("click", submitAuth);
-  passwordInput.addEventListener("keydown", e => { if (e.key === "Enter") submitAuth(); });
+  passwordInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") submitAuth();
+  });
 
   sendButton.addEventListener("click", sendMessage);
-  messageInput.addEventListener("keydown", e => {
+  messageInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
@@ -193,54 +222,99 @@ const deleteAllMessagesBtn = app.querySelector("#deleteAllMessagesBtn");
     loadUsers();
     adminPanel.style.display = "block";
   });
-  closeAdminPanel.addEventListener("click", () => adminPanel.style.display = "none");
+
+  if (closeAdminPanel) {
+    closeAdminPanel.onclick = () => {
+      adminPanel.style.display = "none";
+    };
+  }
 
   async function loadUsers() {
+    if (!userList) return;
     userList.innerHTML = "<li>Loading...</li>";
     try {
-      const res = await fetch(`${backendUrl}/admin/list_users?admin_username=admin&admin_password=${encodeURIComponent(adminPassword)}`);
-      const data = await res.json();
+      const response = await fetch(
+        `${backendUrl}/admin/list_users?admin_username=admin&admin_password=${encodeURIComponent(
+          adminPassword
+        )}`
+      );
+      const data = await response.json();
       if (!Array.isArray(data)) {
-        userList.innerHTML = `<li>Error: ${data.error}</li>`;
+        userList.innerHTML = `<li>Error: ${data.error || "Failed to load users"}</li>`;
         return;
       }
       userList.innerHTML = "";
-      data
-        .filter(u => u !== "admin")
-        .forEach(u => {
-          const li = document.createElement("li");
-          li.textContent = u + " ";
-          const btn = document.createElement("button");
-          btn.textContent = "Delete";
-          btn.addEventListener("click", () => deleteUser(u));
-          li.appendChild(btn);
-          userList.appendChild(li);
-        });
-    } catch {
-      userList.innerHTML = "<li>Failed to load users</li>";
+      data.forEach((username) => {
+        if (username === "admin") return; // don't show admin
+        const li = document.createElement("li");
+        li.style.marginBottom = "6px";
+        li.textContent = username + " ";
+        const delBtn = document.createElement("button");
+        delBtn.textContent = "Delete";
+        delBtn.style.marginLeft = "10px";
+        delBtn.style.background = "#b22222";
+        delBtn.style.color = "white";
+        delBtn.style.border = "none";
+        delBtn.style.cursor = "pointer";
+        delBtn.addEventListener("click", () => deleteUser(username));
+        li.appendChild(delBtn);
+        userList.appendChild(li);
+      });
+    } catch (e) {
+      userList.innerHTML = `<li>Error loading users</li>`;
+      console.error("Error loading users:", e);
     }
   }
 
-  async function deleteUser(u) {
-    if (!confirm(`Delete user "${u}"?`)) return;
-    await fetch(`${backendUrl}/admin/delete_user`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ admin_username: "admin", admin_password: adminPassword, username: u }),
-    });
-    loadUsers();
-    fetchMessages();
+  async function deleteUser(usernameToDelete) {
+    if (!confirm(`Are you sure you want to delete user "${usernameToDelete}"? This will delete all their messages.`)) return;
+    try {
+      const response = await fetch(`${backendUrl}/admin/delete_user`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          admin_username: "admin",
+          admin_password: adminPassword,
+          username: usernameToDelete,
+        }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        alert(`User "${usernameToDelete}" deleted.`);
+        loadUsers();
+        fetchMessages();
+      } else {
+        alert(data.error || "Failed to delete user.");
+      }
+    } catch {
+      alert("Network error.");
+    }
   }
 
-  deleteAllMessagesBtn.addEventListener("click", async () => {
-    if (!confirm("Delete ALL messages?")) return;
-    await fetch(`${backendUrl}/admin/delete_all_messages`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ admin_username: "admin", admin_password: adminPassword }),
+  if (deleteAllMessagesBtn) {
+    deleteAllMessagesBtn.addEventListener("click", async () => {
+      if (!confirm("Are you sure you want to delete ALL messages? This cannot be undone.")) return;
+      try {
+        const response = await fetch(`${backendUrl}/admin/delete_all_messages`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            admin_username: "admin",
+            admin_password: adminPassword,
+          }),
+        });
+        const data = await response.json();
+        if (data.success) {
+          alert("All messages deleted.");
+          fetchMessages();
+        } else {
+          alert(data.error || "Failed to delete messages.");
+        }
+      } catch {
+        alert("Network error.");
+      }
     });
-    fetchMessages();
-  });
+  }
 
   function showApp() {
     loginScreen.style.display = "none";
@@ -257,18 +331,29 @@ const deleteAllMessagesBtn = app.querySelector("#deleteAllMessagesBtn");
     errorMessage.textContent = "";
   }
 
+  // Keyboard & textarea adjustment
   function adjustForKeyboardAndExpand() {
     const inputArea = app.querySelector("input-area");
+    const conversationArea = app.querySelector("conversation-area");
+
     messageInput.style.height = "auto";
     messageInput.addEventListener("input", () => {
       messageInput.style.height = "auto";
       messageInput.style.height = `${messageInput.scrollHeight}px`;
     });
+
     window.addEventListener("resize", () => {
-      const kb = window.innerHeight < screen.height * 0.75;
-      inputArea.style.position = "fixed";
-      inputArea.style.bottom = "0";
-      conversationArea.style.paddingBottom = kb ? `${inputArea.offsetHeight}px` : "0";
+      const isKeyboard = window.innerHeight < screen.height * 0.75;
+      if (isKeyboard) {
+        inputArea.style.position = "fixed";
+        inputArea.style.bottom = "0";
+        inputArea.style.zIndex = "1000";
+        conversationArea.style.paddingBottom = `${inputArea.offsetHeight + 10}px`;
+      } else {
+        inputArea.style.position = "fixed";
+        inputArea.style.bottom = "0";
+        conversationArea.style.paddingBottom = "0";
+      }
     });
   }
   adjustForKeyboardAndExpand();

@@ -1,3 +1,4 @@
+// Updated Nova.OS Messages App Frontend
 export const app_name = "messages-app";
 
 export const app = _component("messages-app", html`
@@ -9,6 +10,7 @@ export const app = _component("messages-app", html`
             <input id="messageInput" type="text" placeholder="Type a message...">
             <button id="sendButton">Send</button>
         </input-area>
+        <div id="progressBar" style="height: 4px; background: #007aff; width: 0%; transition: width 0.3s;"></div>
     </main-area>
 `, boot_up_app);
 
@@ -16,73 +18,90 @@ function boot_up_app(app) {
     const conversationArea = app.querySelector("conversation-area");
     const messageInput = app.querySelector("#messageInput");
     const sendButton = app.querySelector("#sendButton");
+    const progressBar = app.querySelector("#progressBar");
 
-    // Backend URL (replace with your Render URL)
-    const backendUrl = "https://nova-os-messaging-backend.onrender.com";
+    const backendUrl = "https://nova-os-messaging-backend.onrender.com/messages";
 
-    // Function to render messages
+    let user = JSON.parse(localStorage.getItem("nova-user"));
+
+    if (!user) {
+        user = prompt("Enter your username:");
+        const password = prompt("Enter your password:");
+        if (!user || !password) return alert("Login required to use messages.");
+        localStorage.setItem("nova-user", JSON.stringify({ username: user, password }));
+    }
+
+    function showProgress(percent) {
+        progressBar.style.width = percent + "%";
+    }
+
     function renderMessages(messages) {
-        conversationArea.innerHTML = ""; // Clear existing messages
+        conversationArea.innerHTML = "";
         messages.forEach((msg) => {
             const messageBubble = document.createElement("div");
-            messageBubble.className = msg.sent ? "message sent" : "message received";
-            messageBubble.textContent = msg.text;
+            messageBubble.className = msg.user === user.username ? "message sent" : "message received";
+            messageBubble.textContent = `${msg.user}: ${msg.text}`;
             conversationArea.appendChild(messageBubble);
         });
-
-        // Scroll to the bottom of the conversation area
         conversationArea.scrollTop = conversationArea.scrollHeight;
     }
 
-    // Function to fetch messages from the backend
     async function fetchMessages() {
         try {
             const response = await fetch(backendUrl);
             const messages = await response.json();
+            localStorage.setItem("nova-messages", JSON.stringify(messages));
             renderMessages(messages);
         } catch (error) {
-            console.error("Failed to fetch messages:", error);
+            console.error("Fetch failed, loading from localStorage:", error);
+            const cached = localStorage.getItem("nova-messages");
+            if (cached) renderMessages(JSON.parse(cached));
         }
     }
 
-    // Function to send a message to the backend
     async function sendMessage() {
         const text = messageInput.value.trim();
-        if (text) {
-            const message = { text, sent: true };
-            try {
-                const response = await fetch(backendUrl, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(message)
-                });
-                if (response.ok) {
-                    messageInput.value = ""; // Clear input
-                    fetchMessages(); // Refresh messages
-                } else {
-                    console.error("Failed to send message:", await response.json());
-                }
-            } catch (error) {
-                console.error("Failed to send message:", error);
+        if (!text) return;
+
+        const message = {
+            user: user.username,
+            text,
+            sent: true
+        };
+
+        showProgress(30);
+
+        try {
+            const response = await fetch(backendUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(message)
+            });
+
+            showProgress(60);
+
+            if (response.ok) {
+                messageInput.value = "";
+                fetchMessages();
+                showProgress(100);
+                setTimeout(() => showProgress(0), 500);
+            } else {
+                console.error("Message failed:", await response.json());
+                alert("Failed to send message.");
+                showProgress(0);
             }
+        } catch (err) {
+            console.error("Send error:", err);
+            alert("Connection error.");
+            showProgress(0);
         }
     }
 
-    // Event listener for send button
     sendButton.addEventListener("pointerup", sendMessage);
-
-    // Event listener for Enter key
     messageInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-            sendMessage();
-        }
+        if (e.key === "Enter") sendMessage();
     });
 
-    // Polling to fetch new messages periodically (chatroom functionality)
-    setInterval(fetchMessages, 3000); // Fetch messages every 3 seconds
-
-    // Initial fetch of messages
     fetchMessages();
+    setInterval(fetchMessages, 3000);
 }

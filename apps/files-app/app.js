@@ -40,7 +40,7 @@ function boot_up_app(app) {
 	})
 
 	app.querySelector("#home-folder").addEventListener("pointerup",() => {
-		files.path = "O.OS/";
+		files.path = "Nova.OS/";
 		files.refreshFileView();
 	})
 

@@ -51,8 +51,6 @@ function boot_up_app(app) {
   const passwordInput = app.querySelector("#passwordInput");
   const submitBtn = app.querySelector("#submitBtn");
   const toggleForm = app.querySelector("#toggleForm");
-  const toggleLink = toggleForm.querySelector(".toggle-link");
-
   const mainArea = app.querySelector("main-area");
   const logoutButton = app.querySelector("#logoutButton");
   const adminPanelButton = app.querySelector("#adminPanelButton");
@@ -65,17 +63,16 @@ function boot_up_app(app) {
 
   let isLogin = true;
   let user = null;
-  let token = null;
 
-  // --- Show error helper
+  // Show error helper
   function showError(text) {
     errorMessage.textContent = text;
   }
 
-  // --- Toggle Login/Register form
+  // Toggle Login/Register form
   function toggleLoginRegister() {
     isLogin = !isLogin;
-    errorMessage.textContent = "";
+    showError("");
     usernameInput.value = "";
     passwordInput.value = "";
     if (isLogin) {
@@ -91,42 +88,10 @@ function boot_up_app(app) {
 
   toggleForm.addEventListener("click", toggleLoginRegister);
 
-  // --- Save session info locally
-  function saveSession(userData) {
-    user = userData.username;
-    token = userData.token;
-    localStorage.setItem("nova-token", token);
-    localStorage.setItem("nova-username", user);
-  }
-
-  // --- Load session info from localStorage
-  function loadSession() {
-    token = localStorage.getItem("nova-token");
-    user = localStorage.getItem("nova-username");
-    return token && user;
-  }
-
-  // --- Clear session info
-  function clearSession() {
-    localStorage.removeItem("nova-token");
-    localStorage.removeItem("nova-username");
-    token = null;
-    user = null;
-  }
-
-  // --- Show or hide admin button if user is admin
-  function updateAdminButton() {
-    if (user === "admin") {
-      adminPanelButton.style.display = "inline-block";
-    } else {
-      adminPanelButton.style.display = "none";
-    }
-  }
-
-  // --- Render messages
+  // Render messages in conversation area
   function renderMessages(messages) {
     conversationArea.innerHTML = "";
-    messages.forEach((msg, idx) => {
+    messages.forEach((msg) => {
       const messageBubble = document.createElement("div");
       messageBubble.className = msg.user === user ? "message sent" : "message received";
       messageBubble.textContent = `${msg.user}: ${msg.text}`;
@@ -135,19 +100,15 @@ function boot_up_app(app) {
     conversationArea.scrollTop = conversationArea.scrollHeight;
   }
 
-  // --- Fetch messages
+  // Fetch messages (no auth header needed)
   async function fetchMessages() {
-    if (!token) return;
     try {
-      const response = await fetch(`${backendUrl}/messages`, {
-        headers: { Authorization: token },
-      });
+      const response = await fetch(`${backendUrl}/messages`);
       const data = await response.json();
       if (response.ok && data) {
         localStorage.setItem("nova-messages", JSON.stringify(data));
         renderMessages(data);
       } else {
-        // fallback localStorage
         const cached = localStorage.getItem("nova-messages");
         if (cached) renderMessages(JSON.parse(cached));
       }
@@ -157,21 +118,18 @@ function boot_up_app(app) {
     }
   }
 
-  // --- Send message
+  // Send message with { user, text }
   async function sendMessage() {
     const text = messageInput.value.trim();
-    if (!text || !token) return;
+    if (!text || !user) return;
 
     progressBar.style.width = "30%";
 
     try {
       const response = await fetch(`${backendUrl}/messages`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: token,
-        },
-        body: JSON.stringify({ text }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user, text }),
       });
 
       progressBar.style.width = "60%";
@@ -192,7 +150,7 @@ function boot_up_app(app) {
     }
   }
 
-  // --- Login or register action
+  // Login or register user
   async function submitAuth() {
     showError("");
     const username = usernameInput.value.trim();
@@ -215,7 +173,7 @@ function boot_up_app(app) {
 
       if (data.success) {
         if (isLogin) {
-          saveSession(data);
+          user = data.username;
           showApp();
         } else {
           showError("Registration successful! You can now log in.");
@@ -240,7 +198,7 @@ function boot_up_app(app) {
   });
 
   logoutButton.addEventListener("click", () => {
-    clearSession();
+    user = null;
     hideApp();
   });
 
@@ -248,7 +206,6 @@ function boot_up_app(app) {
   function showApp() {
     loginScreen.style.display = "none";
     mainArea.style.display = "flex";
-    updateAdminButton();
     fetchMessages();
     setInterval(fetchMessages, 3000);
   }
@@ -262,10 +219,6 @@ function boot_up_app(app) {
     errorMessage.textContent = "";
   }
 
-  // On load check session
-  if (loadSession()) {
-    showApp();
-  } else {
-    hideApp();
-  }
+  // On load, always show login (no session token)
+  hideApp();
 }

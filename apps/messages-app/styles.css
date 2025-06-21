@@ -57,6 +57,8 @@ conversation-area {
     line-height: 1.5;
     word-wrap: break-word;
     box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
 }
 
 .message.sent {
@@ -69,6 +71,24 @@ conversation-area {
     align-self: flex-start;
     background-color: #333333;
     color: white;
+}
+
+/* Buttons next to messages */
+.msg-btn {
+    margin-left: 8px;
+    padding: 2px 6px;
+    font-size: 12px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    background-color: #555;
+    color: white;
+    user-select: none;
+    transition: background-color 0.3s ease;
+}
+
+.msg-btn:hover {
+    background-color: #007AFF;
 }
 
 /* Input area */
@@ -90,7 +110,20 @@ input[type="text"] {
     outline: none;
 }
 
-button {
+/* Edit input inside message bubble */
+.edit-input {
+    flex: 1;
+    font-size: 14px;
+    padding: 6px 8px;
+    border-radius: 10px;
+    border: 1px solid #555;
+    background-color: #222;
+    color: white;
+    margin-right: 8px;
+}
+
+/* Send button */
+button#sendButton {
     margin-left: 10px;
     padding: 10px 20px;
     font-size: 14px;
@@ -101,7 +134,7 @@ button {
     cursor: pointer;
 }
 
-button:hover {
+button#sendButton:hover {
     background-color: #005BB5;
 }
 

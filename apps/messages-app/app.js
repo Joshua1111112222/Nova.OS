@@ -1,4 +1,3 @@
-// Updated Nova.OS Messages App Frontend with Auth + Smooth Loading + Logout
 export const app_name = "messages-app";
 
 export const app = _component("messages-app", html`
@@ -6,14 +5,14 @@ export const app = _component("messages-app", html`
     <main-area>
         <header-title>
             Messages
-            <button id="logoutButton" style="float: right; font-size: 14px; background: transparent; border: none; color: #aaa; cursor: pointer;">Logout</button>
+            <button id="logoutButton" title="Logout">Logout</button>
         </header-title>
         <conversation-area></conversation-area>
         <input-area>
             <input id="messageInput" type="text" placeholder="Type a message...">
             <button id="sendButton">Send</button>
         </input-area>
-        <div id="progressBar" style="height: 4px; background: #007aff; width: 0%; transition: width 0.5s ease;"></div>
+        <div id="progressBar"></div>
     </main-area>
 `, boot_up_app);
 
@@ -58,7 +57,7 @@ function boot_up_app(app) {
                 localStorage.setItem("nova-user", JSON.stringify(user));
             } else {
                 alert("Invalid login and registration failed.");
-                return location.reload();
+                location.reload();
             }
         }
     }
@@ -69,17 +68,6 @@ function boot_up_app(app) {
 
     function showProgress(percent) {
         progressBar.style.width = percent + "%";
-    }
-
-    function renderMessages(messages) {
-        conversationArea.innerHTML = "";
-        messages.forEach((msg) => {
-            const messageBubble = document.createElement("div");
-            messageBubble.className = msg.user === user.username ? "message sent" : "message received";
-            messageBubble.textContent = `${msg.user}: ${msg.text}`;
-            conversationArea.appendChild(messageBubble);
-        });
-        conversationArea.scrollTop = conversationArea.scrollHeight;
     }
 
     async function fetchMessages() {
@@ -132,6 +120,91 @@ function boot_up_app(app) {
         }
     }
 
+    async function deleteMessage(id) {
+        if (!confirm("Delete this message?")) return;
+        try {
+            const resp = await fetch(`${backendMessages}/${id}`, {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ user: user.username, password: user.password }),
+            });
+            if (resp.ok) fetchMessages();
+            else alert("Delete failed.");
+        } catch {
+            alert("Network error.");
+        }
+    }
+
+    async function editMessage(id, newText) {
+        if (!newText.trim()) return alert("Message cannot be empty.");
+        try {
+            const resp = await fetch(`${backendMessages}/${id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ user: user.username, password: user.password, text: newText }),
+            });
+            if (resp.ok) fetchMessages();
+            else alert("Edit failed.");
+        } catch {
+            alert("Network error.");
+        }
+    }
+
+    function createMessageElement(msg) {
+        const div = document.createElement("div");
+        div.className = msg.user === user.username ? "message sent" : "message received";
+
+        const textSpan = document.createElement("span");
+        textSpan.textContent = `${msg.user}: ${msg.text}`;
+        div.appendChild(textSpan);
+
+        if (msg.user === user.username) {
+            const delBtn = document.createElement("button");
+            delBtn.textContent = "Delete";
+            delBtn.className = "msg-btn";
+            delBtn.onclick = () => deleteMessage(msg.id);
+            div.appendChild(delBtn);
+
+            const editBtn = document.createElement("button");
+            editBtn.textContent = "Edit";
+            editBtn.className = "msg-btn";
+            editBtn.onclick = () => startEditingMessage(msg, div);
+            div.appendChild(editBtn);
+        }
+
+        return div;
+    }
+
+    function startEditingMessage(msg, container) {
+        container.innerHTML = "";
+        const input = document.createElement("input");
+        input.type = "text";
+        input.value = msg.text;
+        input.className = "edit-input";
+        container.appendChild(input);
+
+        const saveBtn = document.createElement("button");
+        saveBtn.textContent = "Save";
+        saveBtn.className = "msg-btn";
+        saveBtn.onclick = () => editMessage(msg.id, input.value);
+        container.appendChild(saveBtn);
+
+        const cancelBtn = document.createElement("button");
+        cancelBtn.textContent = "Cancel";
+        cancelBtn.className = "msg-btn";
+        cancelBtn.onclick = () => fetchMessages();
+        container.appendChild(cancelBtn);
+    }
+
+    function renderMessages(messages) {
+        conversationArea.innerHTML = "";
+        messages.forEach((msg) => {
+            const messageBubble = createMessageElement(msg);
+            conversationArea.appendChild(messageBubble);
+        });
+        conversationArea.scrollTop = conversationArea.scrollHeight;
+    }
+
     sendButton.addEventListener("pointerup", sendMessage);
     messageInput.addEventListener("keydown", (e) => {
         if (e.key === "Enter") sendMessage();
@@ -146,4 +219,4 @@ function boot_up_app(app) {
         fetchMessages();
         setInterval(fetchMessages, 3000);
     });
-} 
+}

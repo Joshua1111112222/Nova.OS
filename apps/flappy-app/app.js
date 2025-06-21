@@ -31,11 +31,18 @@ function boot_up_app(app) {
     // Set canvas size to fill game area
     function resizeCanvas() {
         const rect = gameArea.getBoundingClientRect();
-        canvas.width = rect.width;
-        canvas.height = rect.height;
+    
+        // To handle high-DPI (Retina) screens
+        const dpr = window.devicePixelRatio || 1;
+    
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+    
+        // Scale the canvas context to handle DPI correctly
+        ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
+        ctx.scale(dpr, dpr);
     }
-    resizeCanvas();
-    window.addEventListener("resize", resizeCanvas);
+    
 
     // Game state
     const state = {

@@ -1,395 +1,518 @@
-// Assuming you use plain JS + fetch + vanilla custom elements approach.
-// Adapt based on your setup — below is a plain vanilla example.
+export const app_name = "messages-app";
 
-// Elements references (adjust selectors to your app structure)
-const conversationArea = document.querySelector("conversation-area");
-const inputAreaTextarea = document.querySelector("input-area textarea");
-const sendButton = document.querySelector("#sendButton");
-const scrollToBottomBtn = document.querySelector(".scroll-to-bottom-btn");
+export const app = _component("messages-app", html`
+  <link rel="stylesheet" type="text/css" href="./apps/messages-app/styles.css">
 
-let loggedInUser = null; // { username: string, isAdmin: bool }
-let messages = [];
-let editingMessageId = null;
-let editingOriginalText = null;
-let refreshInterval = null;
+  <!-- LOGIN / REGISTER SCREEN -->
+  <div id="loginScreen" class="login-container">
+    <div class="login-box">
+      <h2 id="formTitle">Login</h2>
+      <div id="errorMessage"></div>
+      <label for="usernameInput">Username</label>
+      <input id="usernameInput" type="text" placeholder="Enter username" autocomplete="username" />
+      <label for="passwordInput">Password</label>
+      <input id="passwordInput" type="password" placeholder="Enter password" autocomplete="current-password" />
+      <button id="submitBtn">Login</button>
+      <div class="login-toggle" id="toggleForm">
+        Don't have an account? <span class="toggle-link">Register here</span>
+      </div>
+    </div>
+  </div>
 
-// API base URL
-const API_BASE = "http://localhost:5000"; // Change as needed
+  <!-- MESSAGES APP -->
+  <main-area style="display:none;">
+    <header-title>
+      Messages
+      <button id="logoutButton" title="Logout">Logout</button>
+      <button id="adminPanelButton" title="Admin Panel" style="display:none;">Admin</button>
+    </header-title>
 
-// -------- Helper to create a message DOM element --------
-function createMessageElement(msg) {
-  const div = document.createElement("div");
-  div.classList.add("message");
-  div.classList.add(msg.user === loggedInUser?.username ? "sent" : "received");
-  div.dataset.messageId = msg.id;
+    <conversation-area></conversation-area>
 
-  // If currently editing this message, render edit input and buttons
-  if (editingMessageId === msg.id) {
-    // Edit mode container
-    const editInput = document.createElement("textarea");
-    editInput.classList.add("edit-input");
-    editInput.value = editingOriginalText;
-    editInput.rows = 2;
-    editInput.addEventListener("input", () => {
-      editingOriginalText = editInput.value;
-    });
-    editInput.focus();
+    <input-area>
+      <textarea id="messageInput" placeholder="Type a message..." autocomplete="off" rows="1"></textarea>
+      <button id="sendButton">Send</button>
+    </input-area>
 
-    const controls = document.createElement("div");
-    controls.classList.add("edit-controls");
+    <div id="progressBar"></div>
+  </main-area>
 
-    const saveBtn = document.createElement("button");
-    saveBtn.textContent = "Save";
-    saveBtn.classList.add("msg-btn");
-    saveBtn.style.backgroundColor = "#28a745"; // green
-    saveBtn.onclick = () => saveEditedMessage(msg.id);
+  <!-- ADMIN PANEL MODAL -->
+  <div id="adminPanel" style="display:none; position: fixed; top:10%; left: 50%; transform: translateX(-50%); background:#222; color:#eee; padding: 20px; border-radius: 8px; max-width:90vw; max-height:80vh; overflow-y:auto; z-index:10000;">
+    <h3>Admin Panel</h3>
+    <button id="closeAdminPanel" style="float:right; background:#f44336; border:none; color:#fff; font-weight:bold; cursor:pointer;">X</button>
+    <h4>Users</h4>
+    <ul id="userList" style="list-style:none; padding:0;"></ul>
+    <button id="deleteAllMessagesBtn" style="margin-top:10px; background:#b22222; color:white; border:none; padding:8px 12px; cursor:pointer;">Delete All Messages</button>
+  </div>
+`, boot_up_app);
 
-    const cancelBtn = document.createElement("button");
-    cancelBtn.textContent = "Cancel";
-    cancelBtn.classList.add("msg-btn");
-    cancelBtn.style.backgroundColor = "#dc3545"; // red
-    cancelBtn.onclick = cancelEditing;
+function boot_up_app(app) {
+  // Wrap all code in DOMContentLoaded to ensure elements exist
+  document.addEventListener("DOMContentLoaded", () => {
+    // Elements inside component
+    const loginScreen = app.querySelector("#loginScreen");
+    const formTitle = app.querySelector("#formTitle");
+    const errorMessage = app.querySelector("#errorMessage");
+    const usernameInput = app.querySelector("#usernameInput");
+    const passwordInput = app.querySelector("#passwordInput");
+    const submitBtn = app.querySelector("#submitBtn");
+    const toggleForm = app.querySelector("#toggleForm");
+    const mainArea = app.querySelector("main-area");
+    const logoutButton = app.querySelector("#logoutButton");
+    const adminPanelButton = app.querySelector("#adminPanelButton");
+    const conversationArea = app.querySelector("conversation-area");
+    const messageInput = app.querySelector("#messageInput");
+    const sendButton = app.querySelector("#sendButton");
+    const progressBar = app.querySelector("#progressBar");
 
-    controls.appendChild(saveBtn);
-    controls.appendChild(cancelBtn);
+    // Admin panel elements (inside component scope)
+    const adminPanel = app.querySelector("#adminPanel");
+    const closeAdminPanel = app.querySelector("#closeAdminPanel");
+    const userList = app.querySelector("#userList");
+    const deleteAllMessagesBtn = app.querySelector("#deleteAllMessagesBtn");
 
-    div.appendChild(editInput);
-    div.appendChild(controls);
+    const backendUrl = "https://nova-os-messaging-backend.onrender.com";
 
-    return div;
-  }
+    let isLogin = true;
+    let user = null;
+    let isAdmin = false;
+    let adminPassword = null;
 
-  // Normal message display
-  const textSpan = document.createElement("span");
-  textSpan.classList.add("message-text");
-  textSpan.textContent = msg.text;
-  div.appendChild(textSpan);
+    let currentEditingMessageId = null;
+    let currentEditingTextarea = null;
 
-  // Buttons container
-  const btnsDiv = document.createElement("div");
-  btnsDiv.classList.add("message-buttons");
-
-  // Show edit/delete buttons based on permissions
-  const canEdit =
-    loggedInUser &&
-    (loggedInUser.isAdmin || msg.user === loggedInUser.username);
-  const canDelete =
-    loggedInUser &&
-    (loggedInUser.isAdmin || msg.user === loggedInUser.username);
-
-  if (canEdit) {
-    const editBtn = document.createElement("button");
-    editBtn.classList.add("msg-btn");
-    editBtn.textContent = "Edit";
-    editBtn.onclick = () => startEditingMessage(msg.id, msg.text);
-    btnsDiv.appendChild(editBtn);
-  }
-
-  if (canDelete) {
-    const delBtn = document.createElement("button");
-    delBtn.classList.add("msg-btn");
-    delBtn.textContent = "Delete";
-    delBtn.onclick = () => deleteMessage(msg.id);
-    btnsDiv.appendChild(delBtn);
-  }
-
-  if (btnsDiv.childElementCount > 0) {
-    div.appendChild(btnsDiv);
-  }
-
-  return div;
-}
-
-// -------- Render all messages --------
-function renderMessages() {
-  conversationArea.innerHTML = "";
-  messages.forEach((msg) => {
-    const el = createMessageElement(msg);
-    conversationArea.appendChild(el);
-  });
-  scrollToBottomIfNearBottom();
-}
-
-// -------- Scroll helpers --------
-function scrollToBottom() {
-  conversationArea.scrollTop = conversationArea.scrollHeight;
-}
-
-function isNearBottom() {
-  // If user scrolled near bottom (within 100px), consider near bottom
-  return (
-    conversationArea.scrollHeight - conversationArea.scrollTop - conversationArea.clientHeight <
-    100
-  );
-}
-
-function scrollToBottomIfNearBottom() {
-  if (isNearBottom()) scrollToBottom();
-}
-
-// -------- Fetch messages --------
-async function fetchMessages() {
-  try {
-    const res = await fetch(`${API_BASE}/messages`);
-    if (!res.ok) throw new Error("Failed to fetch messages");
-    const data = await res.json();
-    messages = data;
-
-    // Only render if not editing — if editing, do not overwrite DOM
-    if (editingMessageId === null) {
-      renderMessages();
-    }
-  } catch (err) {
-    console.error("Error fetching messages:", err);
-  }
-}
-
-// -------- Send message --------
-async function sendMessage() {
-  const text = inputAreaTextarea.value.trim();
-  if (!text) return;
-  try {
-    const res = await fetch(`${API_BASE}/messages`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user: loggedInUser.username, text }),
-    });
-    if (!res.ok) throw new Error("Failed to send message");
-    inputAreaTextarea.value = "";
-    await fetchMessages();
-    scrollToBottom();
-  } catch (err) {
-    alert("Error sending message: " + err.message);
-  }
-}
-
-// -------- Start editing a message --------
-function startEditingMessage(messageId, currentText) {
-  editingMessageId = messageId;
-  editingOriginalText = currentText;
-  renderMessages();
-  // Stop auto-refresh during editing
-  clearInterval(refreshInterval);
-}
-
-// -------- Cancel editing --------
-function cancelEditing() {
-  editingMessageId = null;
-  editingOriginalText = null;
-  renderMessages();
-  // Restart auto-refresh after editing
-  refreshInterval = setInterval(fetchMessages, 3000);
-}
-
-// -------- Save edited message --------
-async function saveEditedMessage(messageId) {
-  if (!editingOriginalText.trim()) {
-    alert("Message text cannot be empty.");
-    return;
-  }
-
-  try {
-    // You need username & password to authorize edit
-    // For simplicity, prompt for password here.
-    // In a real app, better auth flow needed.
-    const password = prompt("Enter your password to save changes:");
-
-    if (!password) {
-      alert("Password is required to save edits.");
-      return;
+    function showError(text) {
+      errorMessage.textContent = text;
     }
 
-    const payload = {
-      username: loggedInUser.username,
-      password,
-      message_id: messageId,
-      new_text: editingOriginalText,
-    };
+    function toggleLoginRegister() {
+      isLogin = !isLogin;
+      showError("");
+      usernameInput.value = "";
+      passwordInput.value = "";
+      formTitle.textContent = isLogin ? "Login" : "Register";
+      submitBtn.textContent = isLogin ? "Login" : "Register";
+      toggleForm.innerHTML = isLogin
+        ? `Don't have an account? <span class="toggle-link">Register here</span>`
+        : `Already have an account? <span class="toggle-link">Login here</span>`;
+    }
+    toggleForm.addEventListener("click", toggleLoginRegister);
 
-    const res = await fetch(`${API_BASE}/edit_message`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    // Render messages with edit/delete buttons for owner/admin
+    function renderMessages(messages) {
+      conversationArea.innerHTML = ""; // Clear existing messages
 
-    const data = await res.json();
+      messages.forEach((msg) => {
+        const messageBubble = document.createElement("div");
+        messageBubble.className = msg.user === user ? "message sent" : "message received";
+        messageBubble.dataset.messageId = msg.id;
 
-    if (!res.ok || !data.success) {
-      alert("Failed to save message: " + (data.error || "Unknown error"));
-      return;
+        // If editing this message, show textarea + save/cancel buttons
+        if (currentEditingMessageId === msg.id) {
+          const editTextarea = document.createElement("textarea");
+          editTextarea.className = "edit-input";
+          editTextarea.value = msg.text;
+          editTextarea.rows = 3;
+          editTextarea.style.width = "100%";
+          editTextarea.style.resize = "vertical";
+          currentEditingTextarea = editTextarea;
+
+          const saveBtn = document.createElement("button");
+          saveBtn.className = "msg-btn";
+          saveBtn.textContent = "Save";
+
+          const cancelBtn = document.createElement("button");
+          cancelBtn.className = "msg-btn";
+          cancelBtn.textContent = "Cancel";
+
+          saveBtn.addEventListener("click", async () => {
+            const newText = editTextarea.value.trim();
+            if (!newText) {
+              alert("Message cannot be empty.");
+              return;
+            }
+            await editMessageApi(msg.id, newText);
+          });
+
+          cancelBtn.addEventListener("click", () => {
+            currentEditingMessageId = null;
+            currentEditingTextarea = null;
+            // re-render messages without editing mode
+            fetchMessages(false);
+          });
+
+          messageBubble.appendChild(editTextarea);
+          const controls = document.createElement("div");
+          controls.className = "edit-controls";
+          controls.appendChild(saveBtn);
+          controls.appendChild(cancelBtn);
+          messageBubble.appendChild(controls);
+        } else {
+          // Normal message text
+          const messageTextDiv = document.createElement("div");
+          messageTextDiv.className = "message-text";
+          messageTextDiv.textContent = `${msg.user}: ${msg.text}`;
+          messageBubble.appendChild(messageTextDiv);
+
+          // If user owns the message or admin, show edit/delete buttons
+          if (isAdmin || msg.user === user) {
+            const btnContainer = document.createElement("div");
+            btnContainer.className = "message-buttons";
+
+            const editBtn = document.createElement("button");
+            editBtn.className = "msg-btn";
+            editBtn.textContent = "Edit";
+            editBtn.addEventListener("click", () => {
+              currentEditingMessageId = msg.id;
+              fetchMessages(false); // re-render messages with editing mode
+            });
+
+            const deleteBtn = document.createElement("button");
+            deleteBtn.className = "msg-btn";
+            deleteBtn.textContent = "Delete";
+            deleteBtn.addEventListener("click", () => {
+              deleteMessageApi(msg.id);
+            });
+
+            btnContainer.appendChild(editBtn);
+            btnContainer.appendChild(deleteBtn);
+            messageBubble.appendChild(btnContainer);
+          }
+        }
+
+        conversationArea.appendChild(messageBubble);
+      });
+
+      // Scroll down if not editing (to avoid jump during editing)
+      if (!currentEditingMessageId) {
+        conversationArea.scrollTop = conversationArea.scrollHeight;
+      }
     }
 
-    editingMessageId = null;
-    editingOriginalText = null;
-    await fetchMessages();
-    scrollToBottom();
+    async function fetchMessages(setTimer = true) {
+      try {
+        const response = await fetch(`${backendUrl}/messages`);
+        const data = await response.json();
+        if (response.ok && data) {
+          localStorage.setItem("nova-messages", JSON.stringify(data));
+          renderMessages(data);
+        } else {
+          const cached = localStorage.getItem("nova-messages");
+          if (cached) renderMessages(JSON.parse(cached));
+        }
+      } catch {
+        const cached = localStorage.getItem("nova-messages");
+        if (cached) renderMessages(JSON.parse(cached));
+      }
+      // Only set interval if requested
+      if (setTimer && !currentEditingMessageId) {
+        clearInterval(fetchMessages.interval);
+        fetchMessages.interval = setInterval(() => fetchMessages(true), 3000);
+      }
+    }
 
-    // Restart auto-refresh
-    refreshInterval = setInterval(fetchMessages, 3000);
-  } catch (err) {
-    alert("Error saving message: " + err.message);
-  }
-}
+    async function sendMessage() {
+      const text = messageInput.value.trim();
+      if (!text || !user) return;
 
-// -------- Delete message --------
-async function deleteMessage(messageId) {
-  if (
-    !confirm("Are you sure you want to delete this message? This action cannot be undone.")
-  )
-    return;
+      progressBar.style.width = "30%";
 
-  try {
-    let url = "";
-    let payload = {};
+      try {
+        const response = await fetch(`${backendUrl}/messages`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user, text }),
+        });
 
-    // If admin, use admin delete endpoint with admin credentials
-    if (loggedInUser.isAdmin) {
-      const adminPassword = prompt("Enter admin password to delete message:");
-      if (!adminPassword) {
-        alert("Admin password required.");
+        progressBar.style.width = "60%";
+
+        if (response.ok) {
+          messageInput.value = "";
+          await fetchMessages(false);
+          progressBar.style.width = "100%";
+          setTimeout(() => (progressBar.style.width = "0%"), 500);
+        } else {
+          const err = await response.json();
+          alert(err.error || "Failed to send message.");
+          progressBar.style.width = "0%";
+        }
+      } catch {
+        alert("Connection error.");
+        progressBar.style.width = "0%";
+      }
+    }
+
+    async function submitAuth() {
+      showError("");
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value.trim();
+
+      if (!username || !password) {
+        showError("Please enter username and password.");
         return;
       }
-      url = `${API_BASE}/admin/delete_message`;
-      payload = {
-        admin_username: loggedInUser.username,
-        admin_password: adminPassword,
-        message_id: messageId,
-      };
-    } else {
-      // Non-admin users cannot delete others messages
-      // But can delete their own via a dedicated endpoint (not provided, so disable for now)
-      alert("Only admin can delete messages currently.");
-      return;
-    }
 
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      const endpoint = isLogin ? "/login" : "/register";
+
+      try {
+        const res = await fetch(`${backendUrl}${endpoint}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          if (isLogin) {
+            user = data.username;
+            isAdmin = data.admin === true;
+            if (isAdmin) {
+              adminPassword = password; // store admin password for admin API calls
+              adminPanelButton.style.display = "inline-block";
+            } else {
+              adminPanelButton.style.display = "none";
+            }
+            localStorage.setItem("nova-user", user);
+            localStorage.setItem("nova-is-admin", isAdmin ? "true" : "false");
+            showApp();
+          } else {
+            showError("Registration successful! You can now log in.");
+            toggleLoginRegister();
+          }
+        } else {
+          showError(data.error || "Operation failed.");
+        }
+      } catch {
+        showError("Network error.");
+      }
+    }
+    submitBtn.addEventListener("click", submitAuth);
+    passwordInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") submitAuth();
     });
 
-    const data = await res.json();
-    if (!res.ok || !data.success) {
-      alert("Failed to delete message: " + (data.error || "Unknown error"));
-      return;
-    }
-
-    await fetchMessages();
-    scrollToBottom();
-  } catch (err) {
-    alert("Error deleting message: " + err.message);
-  }
-}
-
-// -------- Scroll to bottom button --------
-
-function updateScrollButtonVisibility() {
-  if (conversationArea.scrollTop < conversationArea.scrollHeight - conversationArea.clientHeight - 100) {
-    scrollToBottomBtn.style.display = "flex";
-  } else {
-    scrollToBottomBtn.style.display = "none";
-  }
-}
-
-scrollToBottomBtn.addEventListener("click", () => {
-  scrollToBottom();
-  scrollToBottomBtn.style.display = "none";
-});
-
-conversationArea.addEventListener("scroll", updateScrollButtonVisibility);
-
-// -------- Keyboard padding fix for iOS --------
-function updateInputAreaPadding() {
-  // iOS specific hack to fix keyboard covering input
-  // Adds extra bottom padding to input area to avoid being overlapped
-  const inputArea = document.querySelector("input-area");
-  if (!inputArea) return;
-
-  const viewportHeight = window.innerHeight;
-  const inputRect = inputArea.getBoundingClientRect();
-
-  if (inputRect.bottom > viewportHeight) {
-    const overlap = inputRect.bottom - viewportHeight;
-    inputArea.style.paddingBottom = `calc(env(safe-area-inset-bottom, 0) + ${overlap + 12}px)`;
-  } else {
-    inputArea.style.paddingBottom = `calc(env(safe-area-inset-bottom, 0) + 12px)`;
-  }
-}
-
-// Call on resize and input focus (when keyboard appears)
-window.addEventListener("resize", updateInputAreaPadding);
-inputAreaTextarea.addEventListener("focus", () => {
-  setTimeout(updateInputAreaPadding, 300);
-});
-inputAreaTextarea.addEventListener("blur", () => {
-  inputAreaTextarea.style.paddingBottom = "";
-  const inputArea = document.querySelector("input-area");
-  if (inputArea) inputArea.style.paddingBottom = `calc(env(safe-area-inset-bottom, 0) + 12px)`;
-});
-
-// -------- Login / logout --------
-
-async function loginUser(username, password) {
-  try {
-    const res = await fetch(`${API_BASE}/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
+    sendButton.addEventListener("click", sendMessage);
+    messageInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
     });
-    const data = await res.json();
-    if (res.ok && data.success) {
-      loggedInUser = {
-        username: data.username,
-        isAdmin: data.admin,
+
+    logoutButton.addEventListener("click", () => {
+      user = null;
+      isAdmin = false;
+      adminPassword = null;
+      adminPanelButton.style.display = "none";
+      clearInterval(fetchMessages.interval);
+      hideApp();
+    });
+
+    adminPanelButton.addEventListener("click", () => {
+      loadUsers();
+      adminPanel.style.display = "block";
+    });
+
+    if (closeAdminPanel) {
+      closeAdminPanel.onclick = () => {
+        adminPanel.style.display = "none";
       };
-      // Hide login screen and show chat UI here
-      // e.g. document.getElementById("loginScreen").style.display = "none";
-      // Show main chat UI container
-      startApp();
-      return true;
-    } else {
-      alert("Login failed: " + (data.error || "Invalid credentials"));
-      return false;
     }
-  } catch (err) {
-    alert("Login error: " + err.message);
-    return false;
-  }
-}
 
-function logoutUser() {
-  loggedInUser = null;
-  // Show login screen again and hide chat UI
-  // location.reload(); // simple reload for now
-  window.location.reload();
-}
+    async function loadUsers() {
+      if (!userList) return;
+      userList.innerHTML = "<li>Loading...</li>";
+      try {
+        const response = await fetch(
+          `${backendUrl}/admin/list_users?admin_username=admin&admin_password=${encodeURIComponent(
+            adminPassword
+          )}`
+        );
+        const data = await response.json();
+        if (!Array.isArray(data)) {
+          userList.innerHTML = `<li>Error: ${data.error || "Failed to load users"}</li>`;
+          return;
+        }
+        userList.innerHTML = "";
+        data.forEach((username) => {
+          if (username === "admin") return; // don't show admin
+          const li = document.createElement("li");
+          li.style.marginBottom = "6px";
+          li.textContent = username + " ";
+          const delBtn = document.createElement("button");
+          delBtn.textContent = "Delete";
+          delBtn.style.marginLeft = "10px";
+          delBtn.style.background = "#b22222";
+          delBtn.style.color = "white";
+          delBtn.style.border = "none";
+          delBtn.style.cursor = "pointer";
+          delBtn.addEventListener("click", () => deleteUser(username));
+          li.appendChild(delBtn);
+          userList.appendChild(li);
+        });
+      } catch (e) {
+        userList.innerHTML = `<li>Error loading users</li>`;
+        console.error("Error loading users:", e);
+      }
+    }
 
-// -------- Initialization --------
+    async function deleteUser(usernameToDelete) {
+      if (!confirm(`Are you sure you want to delete user "${usernameToDelete}"? This will delete all their messages.`)) return;
+      try {
+        const response = await fetch(`${backendUrl}/admin/delete_user`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            admin_username: "admin",
+            admin_password: adminPassword,
+            username: usernameToDelete,
+          }),
+        });
+        const data = await response.json();
+        if (data.success) {
+          alert(`User "${usernameToDelete}" deleted.`);
+          loadUsers();
+          fetchMessages(false);
+        } else {
+          alert(data.error || "Failed to delete user.");
+        }
+      } catch {
+        alert("Network error.");
+      }
+    }
 
-function startApp() {
-  // Render UI for logged in user (not included here)
-  // Start fetching messages
-  fetchMessages();
-  refreshInterval = setInterval(() => {
-    // Only refresh if not editing
-    if (editingMessageId === null) {
+    async function deleteMessageApi(messageId) {
+      if (!confirm("Are you sure you want to delete this message?")) return;
+      try {
+        // Admin can delete any message, normal users cannot delete others' messages (no UI shown anyway)
+        if (isAdmin) {
+          const response = await fetch(`${backendUrl}/admin/delete_message`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              admin_username: "admin",
+              admin_password: adminPassword,
+              message_id: messageId,
+            }),
+          });
+          const data = await response.json();
+          if (data.success) {
+            alert("Message deleted.");
+            fetchMessages(false);
+          } else {
+            alert(data.error || "Failed to delete message.");
+          }
+        } else {
+          alert("You are not authorized to delete this message.");
+        }
+      } catch {
+        alert("Network error.");
+      }
+    }
+
+    async function editMessageApi(messageId, newText) {
+      try {
+        const response = await fetch(`${backendUrl}/edit_message`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username: user,
+            password: isAdmin ? adminPassword : null,
+            message_id: messageId,
+            new_text: newText,
+          }),
+        });
+        const data = await response.json();
+        if (data.success) {
+          currentEditingMessageId = null;
+          currentEditingTextarea = null;
+          await fetchMessages(false);
+        } else {
+          alert(data.error || "Failed to edit message.");
+        }
+      } catch {
+        alert("Network error.");
+      }
+    }
+
+    deleteAllMessagesBtn.addEventListener("click", async () => {
+      if (!confirm("Delete ALL messages? This cannot be undone.")) return;
+      try {
+        const response = await fetch(`${backendUrl}/admin/delete_all_messages`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            admin_username: "admin",
+            admin_password: adminPassword,
+          }),
+        });
+        const data = await response.json();
+        if (data.success) {
+          alert("All messages deleted.");
+          fetchMessages(false);
+        } else {
+          alert(data.error || "Failed to delete messages.");
+        }
+      } catch {
+        alert("Network error.");
+      }
+    });
+
+    function showApp() {
+      loginScreen.style.display = "none";
+      mainArea.style.display = "flex";
       fetchMessages();
+      usernameInput.value = "";
+      passwordInput.value = "";
+      messageInput.focus();
     }
-  }, 3000);
 
-  // Scroll to bottom initially after a short delay
-  setTimeout(scrollToBottom, 300);
+    function hideApp() {
+      mainArea.style.display = "none";
+      loginScreen.style.display = "flex";
+      showError("");
+      usernameInput.focus();
+    }
+
+    // Auto login if stored
+    (function autoLogin() {
+      const storedUser = localStorage.getItem("nova-user");
+      const storedAdmin = localStorage.getItem("nova-is-admin") === "true";
+      if (storedUser) {
+        user = storedUser;
+        isAdmin = storedAdmin;
+        if (isAdmin) {
+          adminPanelButton.style.display = "inline-block";
+          adminPassword = prompt("Please enter admin password to access admin features:");
+          if (!adminPassword) {
+            isAdmin = false;
+            adminPanelButton.style.display = "none";
+          }
+        } else {
+          adminPanelButton.style.display = "none";
+        }
+        showApp();
+      } else {
+        hideApp();
+      }
+    })();
+
+    // Adjust textarea height automatically
+    messageInput.addEventListener("input", () => {
+      messageInput.style.height = "auto";
+      messageInput.style.height = messageInput.scrollHeight + "px";
+    });
+
+    // Keyboard fix for iPhone / virtual keyboard avoiding input area coverage
+    window.addEventListener("resize", () => {
+      setTimeout(() => {
+        conversationArea.style.paddingBottom = messageInput.offsetHeight + 30 + "px";
+        conversationArea.scrollTop = conversationArea.scrollHeight;
+      }, 100);
+    });
+
+    // Initial padding bottom set to avoid last message being covered
+    conversationArea.style.paddingBottom = messageInput.offsetHeight + 30 + "px";
+  });
 }
-
-// -------- Event listeners --------
-sendButton.addEventListener("click", sendMessage);
-inputAreaTextarea.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage();
-  }
-});
-
-// Initial scroll button check on load
-updateScrollButtonVisibility();
-

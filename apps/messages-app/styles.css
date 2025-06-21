@@ -64,16 +64,18 @@ input-area {
     cursor: pointer;
   }
 
-  /* Make the conversation area scrollable */
+/* Make the conversation area scrollable and avoid overlap with input-area */
 conversation-area {
     flex: 1;
     overflow-y: auto; /* Enable vertical scrolling */
     padding: 10px;
+    padding-bottom: 70px; /* Prevent messages hidden behind input area */
     display: flex;
     flex-direction: column;
     gap: 10px;
     background-color: #1E1E1E; /* Slightly lighter dark background */
     border-top: 1px solid #333333;
+    scroll-behavior: smooth;
 }
 
 /* Ensure the scrollbar looks good in dark mode */
@@ -89,7 +91,6 @@ conversation-area::-webkit-scrollbar-thumb {
 conversation-area::-webkit-scrollbar-track {
     background-color: #1E1E1E;
 }
-  
 
 /* =================== Main App Layout =================== */
 
@@ -547,9 +548,3 @@ button,
     box-shadow: 0 -2px 6px rgba(0,0,0,0.1);
     z-index: 1000;
   }
-  
-
-/* Add smooth scroll behavior */
-conversation-area {
-  scroll-behavior: smooth;
-}

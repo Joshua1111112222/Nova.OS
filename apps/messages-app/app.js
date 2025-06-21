@@ -67,11 +67,11 @@ function boot_up_app(app) {
   const sendButton = app.querySelector("#sendButton");
   const progressBar = app.querySelector("#progressBar");
 
-  // Admin panel elements
-  const adminPanel = document.getElementById("adminPanel");
-  const closeAdminPanel = document.getElementById("closeAdminPanel");
-  const userList = document.getElementById("userList");
-  const deleteAllMessagesBtn = document.getElementById("deleteAllMessagesBtn");
+  // Admin panel elements - use app.querySelector, NOT document.getElementById
+  const adminPanel = app.querySelector("#adminPanel");
+  const closeAdminPanel = app.querySelector("#closeAdminPanel");
+  const userList = app.querySelector("#userList");
+  const deleteAllMessagesBtn = app.querySelector("#deleteAllMessagesBtn");
 
   const backendUrl = "https://nova-os-messaging-backend.onrender.com";
 
@@ -238,7 +238,9 @@ function boot_up_app(app) {
     userList.innerHTML = "<li>Loading...</li>";
     try {
       const response = await fetch(`${backendUrl}/admin/list_users?admin_username=admin&admin_password=${encodeURIComponent(adminPassword)}`);
+      console.log("Admin users fetch status:", response.status);
       const data = await response.json();
+      console.log("Admin users data:", data);
       if (!Array.isArray(data)) {
         userList.innerHTML = `<li>Error: ${data.error || "Failed to load users"}</li>`;
         return;
@@ -260,7 +262,8 @@ function boot_up_app(app) {
         li.appendChild(delBtn);
         userList.appendChild(li);
       });
-    } catch {
+    } catch (e) {
+      console.error("Error loading users:", e);
       userList.innerHTML = `<li>Error loading users</li>`;
     }
   }

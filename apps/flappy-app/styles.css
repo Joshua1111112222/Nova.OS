@@ -1,0 +1,44 @@
+/* General styles for the app */
+.main-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    background-color: #87CEEB; /* Sky blue background */
+    font-family: Arial, sans-serif;
+}
+
+/* Header styles */
+.header-title {
+    font-size: 24px;
+    font-weight: bold;
+    color: #FFFFFF;
+    text-align: center;
+    margin: 20px 0;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Game area styles */
+.game-area {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: calc(100% - 80px); /* Remaining space after header */
+    background-color: #1E90FF; /* Deep sky blue */
+    border: 2px solid #000;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Canvas styles */
+#flappyCanvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-width: 400px;
+    max-height: 600px;
+    border: 2px solid #000;
+    background-color: #FFFFFF;
+}

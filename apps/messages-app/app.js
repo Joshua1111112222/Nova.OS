@@ -178,28 +178,36 @@ function boot_up_app(app) {
     const endpoint = isLogin ? "/login" : "/register";
 
     try {
-      const res = await fetch(`${backendUrl}${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      });
-      const data = await res.json();
-
-      if (data.success) {
-        if (isLogin) {
-          user = data.username;
-          showApp();
-        } else {
-          showError("Registration successful! You can now log in.");
-          toggleLoginRegister();
+        const res = await fetch(`${backendUrl}${endpoint}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json();
+      
+        if (data.success) {
+          if (isLogin) {
+            user = data.username;
+            const isAdmin = data.admin === true;
+            localStorage.setItem("nova-user", user);
+            localStorage.setItem("nova-is-admin", isAdmin ? "true" : "false");
+            showApp();
+          } else {
+            showError("Registration successful! You can now log in.");
+            toggleLoginRegister();
+          }
         }
-      } else {
-        showError(data.error || "Operation failed.");
-      }
-    } catch {
-      showError("Network error.");
-    }
-  }
+        } catch (error) {
+          console.error("Error during authentication:", error);
+          showError("An error occurred. Please try again.");
+        }
+      } // Closing brace for submitAuth function
+        
+      // Ensure event listeners are added outside the try block
+      submitBtn.addEventListener("click", submitAuth);
+      passwordInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") submitAuth();
+      });
 
   submitBtn.addEventListener("click", submitAuth);
   passwordInput.addEventListener("keydown", (e) => {
@@ -254,9 +262,8 @@ function adjustForKeyboard() {
     });
   }
   
-  // Call the function to handle keyboard adjustments
-  adjustForKeyboard();
+// Call the function to handle keyboard adjustments
+adjustForKeyboard();
 
-  // On load, always show login (no session token)
-  hideApp();
-}
+// On load, always show login (no session token)
+hideApp();}

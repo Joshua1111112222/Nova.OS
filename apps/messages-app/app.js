@@ -316,6 +316,19 @@ function boot_up_app(app) {
     });
   }
 
+  function renderMessages(messages) {
+    conversationArea.innerHTML = ""; // Clear existing messages
+    messages.forEach((msg) => {
+        const messageBubble = document.createElement("div");
+        messageBubble.className = msg.user === user ? "message sent" : "message received";
+        messageBubble.textContent = `${msg.user}: ${msg.text}`;
+        conversationArea.appendChild(messageBubble);
+    });
+
+    // Scroll to the bottom of the conversation area after rendering messages
+    conversationArea.scrollTop = conversationArea.scrollHeight;
+}
+
   function showApp() {
     loginScreen.style.display = "none";
     mainArea.style.display = "flex";

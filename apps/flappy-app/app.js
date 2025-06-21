@@ -21,28 +21,14 @@ function boot_up_app(app) {
     // Create the canvas
     const canvas = document.createElement("canvas");
     canvas.id = "flappyCanvas";
+    canvas.width = 400;
+    canvas.height = 600;
     gameArea.appendChild(canvas);
 
     // Append the main area to the app
     app.appendChild(mainArea);
 
     const ctx = canvas.getContext("2d");
-
-    // Set canvas size to fill game area
-    function resizeCanvas() {
-        const rect = gameArea.getBoundingClientRect();
-    
-        // To handle high-DPI (Retina) screens
-        const dpr = window.devicePixelRatio || 1;
-    
-        canvas.width = rect.width * dpr;
-        canvas.height = rect.height * dpr;
-    
-        // Scale the canvas context to handle DPI correctly
-        ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
-        ctx.scale(dpr, dpr);
-    }
-    
 
     // Game state
     const state = {
@@ -262,4 +248,20 @@ function boot_up_app(app) {
     }
 
     gameLoop();
+
+    function resizeCanvas() {
+        const ratio = canvas.width / canvas.height;
+        const windowRatio = window.innerWidth / window.innerHeight;
+
+        if (windowRatio > ratio) {
+            canvas.style.width = `${window.innerHeight * ratio}px`;
+            canvas.style.height = `${window.innerHeight}px`;
+        } else {
+            canvas.style.width = `${window.innerWidth}px`;
+            canvas.style.height = `${window.innerWidth / ratio}px`;
+        }
+    }
+
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
 }

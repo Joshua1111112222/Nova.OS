@@ -18,7 +18,7 @@ function boot_up_app(app) {
     const sendButton = app.querySelector("#sendButton");
 
     // Backend URL (replace with your Render URL)
-    const backendUrl = "https://your-render-url/messages";
+    const backendUrl = "https://nova-os-messaging-backend.onrender.com";
 
     // Function to render messages
     function renderMessages(messages) {

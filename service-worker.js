@@ -27,6 +27,7 @@ const FILES_TO_CACHE = [
   '/src/apps.js',
   '/src/custom.js',
   '/styling.js',
+  '/images/galaxy_nova.png', 
   '/images/nova.png',
   '/images/wallpaper_old.png',
   '/images/glowing_bars.jpg',

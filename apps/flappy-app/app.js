@@ -1,3 +1,5 @@
+export const app_name = "flappy-app";
+
 export const app = _component("flappy-app", html``, boot_up_app);
 
 function boot_up_app(app) {
@@ -19,20 +21,14 @@ function boot_up_app(app) {
     // Create the canvas
     const canvas = document.createElement("canvas");
     canvas.id = "flappyCanvas";
+    canvas.width = 400;
+    canvas.height = 600;
     gameArea.appendChild(canvas);
 
     // Append the main area to the app
     app.appendChild(mainArea);
 
     const ctx = canvas.getContext("2d");
-
-    // Resize canvas to fit the screen
-    function resizeCanvas() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-    }
-    window.addEventListener("resize", resizeCanvas);
-    resizeCanvas();
 
     // Game state
     const state = {
@@ -47,7 +43,7 @@ function boot_up_app(app) {
 
     // Bird properties
     const bird = {
-        x: canvas.width / 4,
+        x: 100,
         y: canvas.height / 2,
         width: 40,
         height: 30,
@@ -148,14 +144,26 @@ function boot_up_app(app) {
 
     // Background
     const background = {
-        color1: "#000000",
-        color2: "#333333",
+        color1: "#87CEEB",
+        color2: "#1E90FF",
         draw() {
             const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
             gradient.addColorStop(0, this.color1);
             gradient.addColorStop(1, this.color2);
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = "#8B4513";
+            ctx.fillRect(0, canvas.height - 20, canvas.width, 20);
+
+            ctx.fillStyle = "#2E8B57";
+            for (let i = 0; i < canvas.width; i += 20) {
+                ctx.beginPath();
+                ctx.moveTo(i, canvas.height - 20);
+                ctx.lineTo(i + 10, canvas.height - 30);
+                ctx.lineTo(i + 20, canvas.height - 20);
+                ctx.fill();
+            }
         }
     };
 
@@ -194,7 +202,7 @@ function boot_up_app(app) {
     }
 
     function drawText() {
-        ctx.fillStyle = "#FFF";
+        ctx.fillStyle = "#000";
         ctx.font = "24px Arial";
 
         if (!state.gameStarted) {
@@ -240,4 +248,20 @@ function boot_up_app(app) {
     }
 
     gameLoop();
+
+    function resizeCanvas() {
+        const ratio = canvas.width / canvas.height;
+        const windowRatio = window.innerWidth / window.innerHeight;
+
+        if (windowRatio > ratio) {
+            canvas.style.width = `${window.innerHeight * ratio}px`;
+            canvas.style.height = `${window.innerHeight}px`;
+        } else {
+            canvas.style.width = `${window.innerWidth}px`;
+            canvas.style.height = `${window.innerWidth / ratio}px`;
+        }
+    }
+
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
 }

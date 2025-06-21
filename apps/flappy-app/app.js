@@ -1,4 +1,3 @@
-import { Modal } from "../../src/modal.js"; // Import Modal if needed for future use
 export const app_name = "flappy-app";
 
 export const app = _component("flappy-app", html``, boot_up_app);

@@ -1,222 +1,271 @@
 export const app_name = "messages-app";
 
 export const app = _component("messages-app", html`
-    <link rel="stylesheet" type="text/css" href="./apps/messages-app/styles.css">
-    <main-area>
-        <header-title>
-            Messages
-            <button id="logoutButton" title="Logout">Logout</button>
-        </header-title>
-        <conversation-area></conversation-area>
-        <input-area>
-            <input id="messageInput" type="text" placeholder="Type a message...">
-            <button id="sendButton">Send</button>
-        </input-area>
-        <div id="progressBar"></div>
-    </main-area>
+  <link rel="stylesheet" type="text/css" href="./apps/messages-app/styles.css">
+
+  <!-- LOGIN / REGISTER SCREEN -->
+  <div id="loginScreen" class="login-container">
+    <div class="login-box">
+      <h2 id="formTitle">Login</h2>
+      <div id="errorMessage"></div>
+
+      <label for="usernameInput">Username</label>
+      <input id="usernameInput" type="text" placeholder="Enter username" autocomplete="username" />
+
+      <label for="passwordInput">Password</label>
+      <input id="passwordInput" type="password" placeholder="Enter password" autocomplete="current-password" />
+
+      <button id="submitBtn">Login</button>
+
+      <div class="login-toggle" id="toggleForm">
+        Don't have an account? <span class="toggle-link">Register here</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MESSAGES APP -->
+  <main-area style="display:none;">
+    <header-title>
+      Messages
+      <button id="logoutButton" title="Logout">Logout</button>
+      <button id="adminPanelButton" title="Admin Panel" style="display:none;">Admin</button>
+    </header-title>
+
+    <conversation-area></conversation-area>
+
+    <input-area>
+      <input id="messageInput" type="text" placeholder="Type a message..." autocomplete="off" />
+      <button id="sendButton">Send</button>
+    </input-area>
+
+    <div id="progressBar"></div>
+  </main-area>
 `, boot_up_app);
 
 function boot_up_app(app) {
-    const conversationArea = app.querySelector("conversation-area");
-    const messageInput = app.querySelector("#messageInput");
-    const sendButton = app.querySelector("#sendButton");
-    const progressBar = app.querySelector("#progressBar");
-    const logoutButton = app.querySelector("#logoutButton");
+  // Elements
+  const loginScreen = app.querySelector("#loginScreen");
+  const formTitle = app.querySelector("#formTitle");
+  const errorMessage = app.querySelector("#errorMessage");
+  const usernameInput = app.querySelector("#usernameInput");
+  const passwordInput = app.querySelector("#passwordInput");
+  const submitBtn = app.querySelector("#submitBtn");
+  const toggleForm = app.querySelector("#toggleForm");
+  const toggleLink = toggleForm.querySelector(".toggle-link");
 
-    const backendBase = "https://nova-os-messaging-backend.onrender.com";
-    const backendMessages = `${backendBase}/messages`;
-    const backendLogin = `${backendBase}/login`;
-    const backendRegister = `${backendBase}/register`;
+  const mainArea = app.querySelector("main-area");
+  const logoutButton = app.querySelector("#logoutButton");
+  const adminPanelButton = app.querySelector("#adminPanelButton");
+  const conversationArea = app.querySelector("conversation-area");
+  const messageInput = app.querySelector("#messageInput");
+  const sendButton = app.querySelector("#sendButton");
+  const progressBar = app.querySelector("#progressBar");
 
-    let user = JSON.parse(localStorage.getItem("nova-user"));
+  const backendUrl = "https://nova-os-messaging-backend.onrender.com";
 
-    async function promptLogin() {
-        const username = prompt("Enter your username:");
-        const password = prompt("Enter your password:");
-        if (!username || !password) return alert("Login required.");
+  let isLogin = true;
+  let user = null;
+  let token = null;
 
-        // Try login
-        const loginResp = await fetch(backendLogin, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username, password })
-        });
+  // --- Show error helper
+  function showError(text) {
+    errorMessage.textContent = text;
+  }
 
-        if (loginResp.ok) {
-            user = { username, password };
-            localStorage.setItem("nova-user", JSON.stringify(user));
+  // --- Toggle Login/Register form
+  function toggleLoginRegister() {
+    isLogin = !isLogin;
+    errorMessage.textContent = "";
+    usernameInput.value = "";
+    passwordInput.value = "";
+    if (isLogin) {
+      formTitle.textContent = "Login";
+      submitBtn.textContent = "Login";
+      toggleForm.innerHTML = `Don't have an account? <span class="toggle-link">Register here</span>`;
+    } else {
+      formTitle.textContent = "Register";
+      submitBtn.textContent = "Register";
+      toggleForm.innerHTML = `Already have an account? <span class="toggle-link">Login here</span>`;
+    }
+  }
+
+  toggleForm.addEventListener("click", toggleLoginRegister);
+
+  // --- Save session info locally
+  function saveSession(userData) {
+    user = userData.username;
+    token = userData.token;
+    localStorage.setItem("nova-token", token);
+    localStorage.setItem("nova-username", user);
+  }
+
+  // --- Load session info from localStorage
+  function loadSession() {
+    token = localStorage.getItem("nova-token");
+    user = localStorage.getItem("nova-username");
+    return token && user;
+  }
+
+  // --- Clear session info
+  function clearSession() {
+    localStorage.removeItem("nova-token");
+    localStorage.removeItem("nova-username");
+    token = null;
+    user = null;
+  }
+
+  // --- Show or hide admin button if user is admin
+  function updateAdminButton() {
+    if (user === "admin") {
+      adminPanelButton.style.display = "inline-block";
+    } else {
+      adminPanelButton.style.display = "none";
+    }
+  }
+
+  // --- Render messages
+  function renderMessages(messages) {
+    conversationArea.innerHTML = "";
+    messages.forEach((msg, idx) => {
+      const messageBubble = document.createElement("div");
+      messageBubble.className = msg.user === user ? "message sent" : "message received";
+      messageBubble.textContent = `${msg.user}: ${msg.text}`;
+      conversationArea.appendChild(messageBubble);
+    });
+    conversationArea.scrollTop = conversationArea.scrollHeight;
+  }
+
+  // --- Fetch messages
+  async function fetchMessages() {
+    if (!token) return;
+    try {
+      const response = await fetch(`${backendUrl}/messages`, {
+        headers: { Authorization: token },
+      });
+      const data = await response.json();
+      if (response.ok && data) {
+        localStorage.setItem("nova-messages", JSON.stringify(data));
+        renderMessages(data);
+      } else {
+        // fallback localStorage
+        const cached = localStorage.getItem("nova-messages");
+        if (cached) renderMessages(JSON.parse(cached));
+      }
+    } catch {
+      const cached = localStorage.getItem("nova-messages");
+      if (cached) renderMessages(JSON.parse(cached));
+    }
+  }
+
+  // --- Send message
+  async function sendMessage() {
+    const text = messageInput.value.trim();
+    if (!text || !token) return;
+
+    progressBar.style.width = "30%";
+
+    try {
+      const response = await fetch(`${backendUrl}/messages`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token,
+        },
+        body: JSON.stringify({ text }),
+      });
+
+      progressBar.style.width = "60%";
+
+      if (response.ok) {
+        messageInput.value = "";
+        await fetchMessages();
+        progressBar.style.width = "100%";
+        setTimeout(() => (progressBar.style.width = "0%"), 500);
+      } else {
+        const err = await response.json();
+        alert(err.error || "Failed to send message.");
+        progressBar.style.width = "0%";
+      }
+    } catch {
+      alert("Connection error.");
+      progressBar.style.width = "0%";
+    }
+  }
+
+  // --- Login or register action
+  async function submitAuth() {
+    showError("");
+    const username = usernameInput.value.trim();
+    const password = passwordInput.value.trim();
+
+    if (!username || !password) {
+      showError("Please enter username and password.");
+      return;
+    }
+
+    const endpoint = isLogin ? "/login" : "/register";
+
+    try {
+      const res = await fetch(`${backendUrl}${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        if (isLogin) {
+          saveSession(data);
+          showApp();
         } else {
-            // Try register
-            const registerResp = await fetch(backendRegister, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username, password })
-            });
-            if (registerResp.ok) {
-                user = { username, password };
-                localStorage.setItem("nova-user", JSON.stringify(user));
-            } else {
-                alert("Invalid login and registration failed.");
-                location.reload();
-            }
+          showError("Registration successful! You can now log in.");
+          toggleLoginRegister();
         }
+      } else {
+        showError(data.error || "Operation failed.");
+      }
+    } catch {
+      showError("Network error.");
     }
+  }
 
-    async function validateLogin() {
-        if (!user) await promptLogin();
-    }
+  submitBtn.addEventListener("click", submitAuth);
+  passwordInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") submitAuth();
+  });
 
-    function showProgress(percent) {
-        progressBar.style.width = percent + "%";
-    }
+  sendButton.addEventListener("click", sendMessage);
+  messageInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") sendMessage();
+  });
 
-    async function fetchMessages() {
-        try {
-            const response = await fetch(backendMessages);
-            const messages = await response.json();
-            localStorage.setItem("nova-messages", JSON.stringify(messages));
-            renderMessages(messages);
-        } catch (error) {
-            console.error("Fetch failed, loading from localStorage:", error);
-            const cached = localStorage.getItem("nova-messages");
-            if (cached) renderMessages(JSON.parse(cached));
-        }
-    }
+  logoutButton.addEventListener("click", () => {
+    clearSession();
+    hideApp();
+  });
 
-    async function sendMessage() {
-        const text = messageInput.value.trim();
-        if (!text) return;
+  // Show messages app, hide login
+  function showApp() {
+    loginScreen.style.display = "none";
+    mainArea.style.display = "flex";
+    updateAdminButton();
+    fetchMessages();
+    setInterval(fetchMessages, 3000);
+  }
 
-        const message = {
-            user: user.username,
-            password: user.password,
-            text
-        };
+  // Show login, hide messages app
+  function hideApp() {
+    loginScreen.style.display = "flex";
+    mainArea.style.display = "none";
+    usernameInput.value = "";
+    passwordInput.value = "";
+    errorMessage.textContent = "";
+  }
 
-        showProgress(30);
-
-        try {
-            const response = await fetch(backendMessages, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(message)
-            });
-
-            showProgress(60);
-
-            if (response.ok) {
-                messageInput.value = "";
-                fetchMessages();
-                showProgress(100);
-                setTimeout(() => showProgress(0), 500);
-            } else {
-                const err = await response.json();
-                alert("Error: " + (err.error || "Unknown"));
-                showProgress(0);
-            }
-        } catch (err) {
-            alert("Network error.");
-            showProgress(0);
-        }
-    }
-
-    async function deleteMessage(id) {
-        if (!confirm("Delete this message?")) return;
-        try {
-            const resp = await fetch(`${backendMessages}/${id}`, {
-                method: "DELETE",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ user: user.username, password: user.password }),
-            });
-            if (resp.ok) fetchMessages();
-            else alert("Delete failed.");
-        } catch {
-            alert("Network error.");
-        }
-    }
-
-    async function editMessage(id, newText) {
-        if (!newText.trim()) return alert("Message cannot be empty.");
-        try {
-            const resp = await fetch(`${backendMessages}/${id}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ user: user.username, password: user.password, text: newText }),
-            });
-            if (resp.ok) fetchMessages();
-            else alert("Edit failed.");
-        } catch {
-            alert("Network error.");
-        }
-    }
-
-    function createMessageElement(msg) {
-        const div = document.createElement("div");
-        div.className = msg.user === user.username ? "message sent" : "message received";
-
-        const textSpan = document.createElement("span");
-        textSpan.textContent = `${msg.user}: ${msg.text}`;
-        div.appendChild(textSpan);
-
-        if (msg.user === user.username) {
-            const delBtn = document.createElement("button");
-            delBtn.textContent = "Delete";
-            delBtn.className = "msg-btn";
-            delBtn.onclick = () => deleteMessage(msg.id);
-            div.appendChild(delBtn);
-
-            const editBtn = document.createElement("button");
-            editBtn.textContent = "Edit";
-            editBtn.className = "msg-btn";
-            editBtn.onclick = () => startEditingMessage(msg, div);
-            div.appendChild(editBtn);
-        }
-
-        return div;
-    }
-
-    function startEditingMessage(msg, container) {
-        container.innerHTML = "";
-        const input = document.createElement("input");
-        input.type = "text";
-        input.value = msg.text;
-        input.className = "edit-input";
-        container.appendChild(input);
-
-        const saveBtn = document.createElement("button");
-        saveBtn.textContent = "Save";
-        saveBtn.className = "msg-btn";
-        saveBtn.onclick = () => editMessage(msg.id, input.value);
-        container.appendChild(saveBtn);
-
-        const cancelBtn = document.createElement("button");
-        cancelBtn.textContent = "Cancel";
-        cancelBtn.className = "msg-btn";
-        cancelBtn.onclick = () => fetchMessages();
-        container.appendChild(cancelBtn);
-    }
-
-    function renderMessages(messages) {
-        conversationArea.innerHTML = "";
-        messages.forEach((msg) => {
-            const messageBubble = createMessageElement(msg);
-            conversationArea.appendChild(messageBubble);
-        });
-        conversationArea.scrollTop = conversationArea.scrollHeight;
-    }
-
-    sendButton.addEventListener("pointerup", sendMessage);
-    messageInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") sendMessage();
-    });
-
-    logoutButton.addEventListener("click", () => {
-        localStorage.removeItem("nova-user");
-        location.reload();
-    });
-
-    validateLogin().then(() => {
-        fetchMessages();
-        setInterval(fetchMessages, 3000);
-    });
+  // On load check session
+  if (loadSession()) {
+    showApp();
+  } else {
+    hideApp();
+  }
 }

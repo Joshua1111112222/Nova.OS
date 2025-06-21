@@ -66,9 +66,10 @@ function boot_up_app(app) {
 
   // ** Now fixing the scope: global DOM queries for admin panel **
   const adminPanel = document.getElementById("adminPanel");
-  const closeAdminPanel = document.getElementById("closeAdminPanel");
-  const userList = document.getElementById("userList");
-  const deleteAllMessagesBtn = document.getElementById("deleteAllMessagesBtn");
+  const closeAdminPanel = app.querySelector("#closeAdminPanel");
+const userList = app.querySelector("#userList");
+const deleteAllMessagesBtn = app.querySelector("#deleteAllMessagesBtn");
+
 
   const backendUrl = "https://nova-os-messaging-backend.onrender.com";
 

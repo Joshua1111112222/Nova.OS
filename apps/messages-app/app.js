@@ -1,46 +1,30 @@
-export const app_name = "messages-app";
-
 export const app = _component("messages-app", html`
-  <link rel="stylesheet" type="text/css" href="./apps/messages-app/styles.css">
-
-  <!-- LOGIN / REGISTER SCREEN -->
-  <div id="loginScreen" class="login-container">
-    <div class="login-box">
-      <h2 id="formTitle">Login</h2>
-      <div id="errorMessage"></div>
-
-      <label for="usernameInput">Username</label>
-      <input id="usernameInput" type="text" placeholder="Enter username" autocomplete="username" />
-
-      <label for="passwordInput">Password</label>
-      <input id="passwordInput" type="password" placeholder="Enter password" autocomplete="current-password" />
-
-      <button id="submitBtn">Login</button>
-
-      <div class="login-toggle" id="toggleForm">
-        Don't have an account? <span class="toggle-link">Register here</span>
-      </div>
+    <link rel="stylesheet" type="text/css" href="./apps/messages-app/styles.css">
+  
+    <!-- LOGIN / REGISTER SCREEN -->
+    <div id="loginScreen" class="login-container">
+      <!-- unchanged -->
     </div>
-  </div>
-
-  <!-- MESSAGES APP -->
-  <main-area style="display:none;">
-    <header-title>
-      Messages
-      <button id="logoutButton" title="Logout">Logout</button>
-      <button id="adminPanelButton" title="Admin Panel" style="display:none;">Admin</button>
-    </header-title>
-
-    <conversation-area></conversation-area>
-
-    <input-area>
-      <input id="messageInput" type="text" placeholder="Type a message..." autocomplete="off" />
-      <button id="sendButton">Send</button>
-    </input-area>
-
-    <div id="progressBar"></div>
-  </main-area>
-`, boot_up_app);
+  
+    <!-- MESSAGES APP -->
+    <main-area style="display:none;">
+      <header-title>
+        Messages
+        <button id="logoutButton" title="Logout">Logout</button>
+        <button id="adminPanelButton" title="Admin Panel" style="display:none;">Admin</button>
+      </header-title>
+  
+      <conversation-area></conversation-area>
+  
+      <input-area>
+        <textarea id="messageInput" placeholder="Type a message..." autocomplete="off" rows="1"></textarea>
+        <button id="sendButton">Send</button>
+      </input-area>
+  
+      <div id="progressBar"></div>
+    </main-area>
+  `, boot_up_app);
+  
 
 function boot_up_app(app) {
   // Elements
@@ -63,6 +47,36 @@ function boot_up_app(app) {
 
   let isLogin = true;
   let user = null;
+
+  function adjustForKeyboardAndExpand() {
+    const inputArea = app.querySelector("input-area");
+    const messageInput = app.querySelector("#messageInput");
+    const conversationArea = app.querySelector("conversation-area");
+  
+    // Auto-expand textarea
+    messageInput.addEventListener("input", () => {
+      messageInput.style.height = "auto";
+      messageInput.style.height = `${messageInput.scrollHeight}px`;
+    });
+  
+    // Prevent keyboard from covering input
+    window.addEventListener("resize", () => {
+      const isKeyboard = window.innerHeight < screen.height * 0.75;
+      if (isKeyboard) {
+        inputArea.style.position = "fixed";
+        inputArea.style.bottom = "0";
+        inputArea.style.zIndex = "1000";
+        conversationArea.style.paddingBottom = `${inputArea.offsetHeight + 10}px`;
+      } else {
+        inputArea.style.position = "fixed";
+        inputArea.style.bottom = "0";
+        conversationArea.style.paddingBottom = "0";
+      }
+    });
+  }
+  
+  adjustForKeyboardAndExpand();
+  
 
   // Show error helper
   function showError(text) {

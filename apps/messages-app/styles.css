@@ -27,6 +27,44 @@ textarea {
   -webkit-tap-highlight-color: transparent;
 }
 
+input-area {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border-top: 1px solid #ccc;
+    background: #fff;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    box-sizing: border-box;
+    z-index: 10;
+  }
+  
+  input-area textarea {
+    flex: 1;
+    padding: 8px;
+    font-size: 16px;
+    resize: none;
+    min-height: 40px;
+    max-height: 120px;
+    line-height: 20px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    overflow-y: auto;
+  }
+  
+  input-area button {
+    margin-left: 8px;
+    padding: 8px 14px;
+    font-size: 16px;
+    background: #007aff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+
 /* =================== Main App Layout =================== */
 
 main-area {

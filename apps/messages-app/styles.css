@@ -325,12 +325,10 @@ button#sendButton:active {
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
   user-select: text;
   -webkit-text-security: disc; /* iOS */
-  text-security: disc; /* fallback */
 }
 
 .login-box input[type="text"] {
   -webkit-text-security: none;
-  text-security: none;
 }
 
 .login-box input:focus {

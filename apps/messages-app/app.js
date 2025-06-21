@@ -80,12 +80,10 @@ function boot_up_app(app) {
   let isAdmin = false;
   let adminPassword = null; // stored temporarily after login for admin calls
 
-  // Show error helper
   function showError(text) {
     errorMessage.textContent = text;
   }
 
-  // Toggle Login/Register form
   function toggleLoginRegister() {
     isLogin = !isLogin;
     showError("");
@@ -103,7 +101,6 @@ function boot_up_app(app) {
   }
   toggleForm.addEventListener("click", toggleLoginRegister);
 
-  // Render messages
   function renderMessages(messages) {
     conversationArea.innerHTML = "";
     messages.forEach((msg) => {
@@ -115,7 +112,6 @@ function boot_up_app(app) {
     conversationArea.scrollTop = conversationArea.scrollHeight;
   }
 
-  // Fetch messages
   async function fetchMessages() {
     try {
       const response = await fetch(`${backendUrl}/messages`);
@@ -133,7 +129,6 @@ function boot_up_app(app) {
     }
   }
 
-  // Send message
   async function sendMessage() {
     const text = messageInput.value.trim();
     if (!text || !user) return;
@@ -165,7 +160,6 @@ function boot_up_app(app) {
     }
   }
 
-  // Login or register
   async function submitAuth() {
     showError("");
     const username = usernameInput.value.trim();
@@ -231,7 +225,6 @@ function boot_up_app(app) {
     hideApp();
   });
 
-  // Admin panel functionality
   adminPanelButton.addEventListener("click", () => {
     loadUsers();
     adminPanel.style.display = "block";
@@ -246,13 +239,13 @@ function boot_up_app(app) {
     try {
       const response = await fetch(`${backendUrl}/admin/list_users?admin_username=admin&admin_password=${encodeURIComponent(adminPassword)}`);
       const data = await response.json();
-      if (response.success === false || !Array.isArray(data)) {
+      if (!Array.isArray(data)) {
         userList.innerHTML = `<li>Error: ${data.error || "Failed to load users"}</li>`;
         return;
       }
       userList.innerHTML = "";
       data.forEach((username) => {
-        if (username === "admin") return; // Don't show admin for deletion
+        if (username === "admin") return; // don't show admin
         const li = document.createElement("li");
         li.style.marginBottom = "6px";
         li.textContent = username + " ";
@@ -267,7 +260,7 @@ function boot_up_app(app) {
         li.appendChild(delBtn);
         userList.appendChild(li);
       });
-    } catch (e) {
+    } catch {
       userList.innerHTML = `<li>Error loading users</li>`;
     }
   }
@@ -320,7 +313,6 @@ function boot_up_app(app) {
     }
   });
 
-  // Show messages app, hide login
   function showApp() {
     loginScreen.style.display = "none";
     mainArea.style.display = "flex";
@@ -328,7 +320,6 @@ function boot_up_app(app) {
     setInterval(fetchMessages, 3000);
   }
 
-  // Show login, hide messages app
   function hideApp() {
     loginScreen.style.display = "flex";
     mainArea.style.display = "none";
@@ -337,19 +328,17 @@ function boot_up_app(app) {
     errorMessage.textContent = "";
   }
 
-  // Adjust keyboard and textarea resizing
+  // Keyboard & textarea adjustment
   function adjustForKeyboardAndExpand() {
     const inputArea = app.querySelector("input-area");
     const conversationArea = app.querySelector("conversation-area");
 
-    // Auto-expand textarea
     messageInput.style.height = "auto";
     messageInput.addEventListener("input", () => {
       messageInput.style.height = "auto";
       messageInput.style.height = `${messageInput.scrollHeight}px`;
     });
 
-    // Prevent keyboard covering input on mobile
     window.addEventListener("resize", () => {
       const isKeyboard = window.innerHeight < screen.height * 0.75;
       if (isKeyboard) {
@@ -366,6 +355,5 @@ function boot_up_app(app) {
   }
   adjustForKeyboardAndExpand();
 
-  // On load always show login
   hideApp();
 }

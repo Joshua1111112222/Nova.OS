@@ -48,18 +48,8 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keyList) =>
-      Promise.all(
-        keyList.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
-        })
-      )
-    )
-  );
-  self.clients.claim();
+  // Do NOT delete old caches, keep everything indefinitely
+  event.waitUntil(self.clients.claim());
 });
 
 self.addEventListener('fetch', (event) => {

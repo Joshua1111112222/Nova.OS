@@ -1,11 +1,11 @@
-/* General styles for the app */
+/* General styles */
 main-area {
     display: flex;
     flex-direction: column;
     height: 100%;
-    background-color: #121212; /* Dark background */
+    background-color: #121212;
     font-family: Arial, sans-serif;
-    color: #FFFFFF; /* Light text for dark mode */
+    color: #FFFFFF;
 }
 
 /* Header styles */
@@ -14,12 +14,29 @@ header-title {
     font-weight: bold;
     text-align: center;
     padding: 10px;
-    background-color: #1E1E1E; /* Slightly lighter dark background */
+    background-color: #1E1E1E;
     color: #FFFFFF;
     box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.5);
+    position: relative;
 }
 
-/* Conversation area styles */
+/* Logout button */
+#logoutButton {
+    position: absolute;
+    right: 15px;
+    top: 10px;
+    font-size: 14px;
+    color: #aaa;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+#logoutButton:hover {
+    color: #fff;
+}
+
+/* Conversation area */
 conversation-area {
     flex: 1;
     padding: 10px;
@@ -27,11 +44,11 @@ conversation-area {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    background-color: #1E1E1E; /* Slightly lighter dark background */
-    border-top: 1px solid #333333;
+    background-color: #1E1E1E;
+    border-top: 1px solid #333;
 }
 
-/* Message bubble styles */
+/* Messages */
 .message {
     max-width: 70%;
     padding: 10px;
@@ -44,31 +61,31 @@ conversation-area {
 
 .message.sent {
     align-self: flex-end;
-    background-color: #007AFF; /* Blue for sent messages */
+    background-color: #007AFF;
     color: white;
 }
 
 .message.received {
     align-self: flex-start;
-    background-color: #333333; /* Gray for received messages */
+    background-color: #333333;
     color: white;
 }
 
-/* Input area styles */
+/* Input area */
 input-area {
     display: flex;
     padding: 10px;
-    background-color: #1E1E1E; /* Slightly lighter dark background */
-    border-top: 1px solid #333333;
+    background-color: #1E1E1E;
+    border-top: 1px solid #333;
 }
 
 input[type="text"] {
     flex: 1;
     padding: 10px;
     font-size: 14px;
-    border: 1px solid #555555;
+    border: 1px solid #555;
     border-radius: 20px;
-    background-color: #121212; /* Dark input background */
+    background-color: #121212;
     color: white;
     outline: none;
 }
@@ -79,11 +96,19 @@ button {
     font-size: 14px;
     border: none;
     border-radius: 20px;
-    background-color: #007AFF; /* Blue for send button */
+    background-color: #007AFF;
     color: white;
     cursor: pointer;
 }
 
 button:hover {
-    background-color: #005BB5; /* Darker blue on hover */
+    background-color: #005BB5;
+}
+
+/* Progress bar */
+#progressBar {
+    height: 4px;
+    background: #007AFF;
+    width: 0%;
+    transition: width 0.5s ease;
 }

@@ -3,11 +3,14 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     width: 100%;
-    height: 100%;
+    height: 100vh; /* Full viewport height */
     background-color: #87CEEB; /* Sky blue background */
     font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
 }
 
 /* Header styles */
@@ -16,27 +19,34 @@
     font-weight: bold;
     color: #FFFFFF;
     text-align: center;
-    margin: 20px 0;
+    height: 60px;
+    line-height: 60px;
+    width: 100%;
+    background-color: #1E90FF;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    user-select: none;
+    flex-shrink: 0;
+    margin: 0;
 }
 
 /* Game area styles */
 .game-area {
+    flex: 1; /* Take remaining vertical space */
     display: flex;
     align-items: center;
     justify-content: center;
     width: 100%;
-    height: calc(100% - 80px); /* Remaining space after header */
     background-color: #1E90FF; /* Deep sky blue */
     border: 2px solid #000;
     box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
 }
 
 /* Canvas styles */
 #flappyCanvas {
     display: block;
     width: 100%;
-    height: auto;
+    height: 100%;
     max-width: 400px;
     max-height: 600px;
     border: 2px solid #000;

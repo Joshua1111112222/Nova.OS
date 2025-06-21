@@ -1,42 +1,43 @@
-/* Main container fills entire screen */
+/* General styles for the app */
 .main-area {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: center;
     width: 100vw;
     height: 100vh;
-    background: linear-gradient(to bottom, #87CEEB, #1E90FF);
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
+    background-color: #87CEEB; /* Sky blue background */
+    font-family: 'Arial', sans-serif;
 }
 
-/* Game title */
+/* Header styles */
 .header-title {
-    font-size: 24px;
+    font-size: 32px;
     font-weight: bold;
-    color: white;
+    color: #FFFFFF;
+    text-align: center;
+    margin: 20px 0;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-    margin: 20px 0 10px 0;
 }
 
-/* Game container */
+/* Game area styles */
 .game-area {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 100%;
     flex-grow: 1;
+    width: 100%;
+    max-width: 100%;
+    background-color: transparent;
 }
 
-/* Responsive canvas */
+/* Canvas styles */
 #flappyCanvas {
     border: 2px solid #000;
-    max-width: 100%;
-    max-height: 100%;
+    background-color: transparent;
     display: block;
-    background-color: white;
-    touch-action: manipulation;
+    max-width: 100vw;
+    max-height: 100vh;
+    image-rendering: pixelated;
+    user-select: none;
 }

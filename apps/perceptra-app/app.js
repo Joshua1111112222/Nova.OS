@@ -1,22 +1,54 @@
 export const app_name = "perceptra-app";
 
 export const app = _component("perceptra-app", html`
-  <div>
-    <img src="./apps/perceptra-app/icon.png" alt="Perceptra Icon" style="width:24px; height:24px; vertical-align:middle; margin-right:8px;">
-    <span style="font-weight:bold; font-size:14px; vertical-align:middle;">Perceptra</span>
-    <button id="closeButton" style="position:absolute; top:8px; left:8px; width:24px; height:24px; background:#f44336; color:white; border:none; border-radius:50%; cursor:pointer; font-size:16px; line-height:24px; text-align:center;">×</button>
-  </div>
-  <iframe src="https://joshua1111112222.github.io/Perceptra" style="width:100%; height:calc(100% - 32px); border:none;"></iframe>
+  <header-title>
+    Perceptra
+    <button id="closeAppBtn" title="Close App" style="float:right;">✕</button>
+  </header-title>
+
+  <iframe id="perceptraIframe" src="https://your-pwa-link.example.com" style="width:100%; height:calc(100% - 40px); border:none;"></iframe>
 `, boot_up_app);
 
 function boot_up_app(app) {
-  const closeButton = app.querySelector("#closeButton");
+  const iframe = app.querySelector("#perceptraIframe");
+  const closeBtn = app.querySelector("#closeAppBtn");
 
-  // Close button functionality
-  closeButton.addEventListener("click", () => {
-    app.style.display = "none"; // Hide the app
-    // Trigger home screen logic (this depends on your OS framework)
-    const homeScreenEvent = new CustomEvent("navigateToHomeScreen");
-    window.dispatchEvent(homeScreenEvent);
+  // Close app handler
+  closeBtn.addEventListener("click", () => {
+    app.style.display = "none";
   });
+
+  // Triple tap detection variables
+  let tapCount = 0;
+  let lastTapTime = 0;
+  const TAP_DELAY = 600; // ms max between taps
+
+  function resetTap() {
+    tapCount = 0;
+    lastTapTime = 0;
+  }
+
+  // Detect triple tap anywhere on the app to close it
+  app.addEventListener("touchend", (e) => {
+    const currentTime = Date.now();
+    if (currentTime - lastTapTime < TAP_DELAY) {
+      tapCount++;
+    } else {
+      tapCount = 1;
+    }
+    lastTapTime = currentTime;
+
+    if (tapCount === 3) {
+      resetTap();
+      app.style.display = "none";
+    }
+  });
+
+  // Optional: expose a way to open the app again from outside
+  app.open = () => {
+    app.style.display = "block";
+  };
+
+  // Initially hide app if needed or leave visible
+  // app.style.display = "none"; // uncomment if you want to start hidden
 }

@@ -1,1 +1,1 @@
-export const appStore = ["terminal-app","settings-app","messages-app","chrome-app","calculator-app","particles-app","files-app", "flappy-app"]
+export const appStore = ["terminal-app","settings-app","messages-app","chrome-app","calculator-app","particles-app","files-app", "flappy-app","perceptra-app"]

@@ -59,13 +59,13 @@ function boot_up_app(app) {
   const closeButton = app.querySelector("#closeButton");
   const iframe = app.querySelector("iframe");
 
-  // Nuclear option - reload the whole page
+  // X button restarts the whole system using Terminal's restart logic
   closeButton.addEventListener("click", () => {
-    console.log("Nuclear option - reloading page");
-    window.location.reload();
+    console.log("Restarting OS...");
+    self.location = self.location;
   });
 
-  // Triple tap detection like your other apps probably use
+  // Triple tap detection for alternative close method
   let taps = [];
   const TAP_WINDOW = 600;
 

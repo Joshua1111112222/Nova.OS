@@ -56,21 +56,41 @@ export const app = _component("perceptra-app", html`
 `, boot_up_app);
 
 function boot_up_app(app) {
-  // 'app' is shadow root, get host element (the custom element)
-  const host = app.host || app.getRootNode().host || app;
-  
   const closeButton = app.querySelector("#closeButton");
   const iframe = app.querySelector("iframe");
 
-  // Close button works by removing the host custom element
-  closeButton.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log("Close button clicked - removing app");
-    host.remove();
+  // Simple close - let the framework handle it
+  closeButton.addEventListener("click", () => {
+    // Get the host element (the custom element itself)
+    const host = app.getRootNode().host;
+    if (host) {
+      host.remove();
+    }
   });
 
+  // Triple tap detection like your other apps probably use
+  let taps = [];
+  const TAP_WINDOW = 600;
+
+  function handleTripleTap(e) {
+    const now = Date.now();
+    taps = taps.filter(t => now - t < TAP_WINDOW);
+    taps.push(now);
+
+    if (taps.length >= 3) {
+      const host = app.getRootNode().host;
+      if (host) {
+        host.remove();
+      }
+      taps = [];
+    }
+  }
+
+  // Listen for taps on the whole app
+  app.addEventListener("click", handleTripleTap);
+  app.addEventListener("touchend", handleTripleTap);
+
   iframe.addEventListener("load", () => {
-    console.log("Iframe loaded");
+    console.log("Perceptra loaded");
   });
 }

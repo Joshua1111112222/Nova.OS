@@ -40,7 +40,6 @@ export const app = _component("messages-app", html`
   </main-area>
 
   <!-- ADMIN PANEL MODAL -->
-  <button id="viewPasswordsBtn" style="margin-top:10px; background:#007bff; color:white; border:none; padding:8px 12px; cursor:pointer;">View Passwords</button>
   <div id="adminPanel" style="display:none; position: fixed; top:10%; left: 50%; transform: translateX(-50%); background:#222; color:#eee; padding: 20px; border-radius: 8px; max-width:90vw; max-height:80vh; overflow-y:auto; z-index:10000;">
     <h3>Admin Panel</h3>
     <button id="closeAdminPanel" style="float:right; background:#f44336; border:none; color:#fff; font-weight:bold; cursor:pointer;">X</button>
@@ -78,9 +77,8 @@ function boot_up_app(app) {
   let user = null;
   let isAdmin = false;
   let adminPassword = null;
-
-  // Store latest fetched messages here
   let messages = [];
+  let isEditingMessage = false;
 
   function showError(text) {
     errorMessage.textContent = text;
@@ -99,7 +97,6 @@ function boot_up_app(app) {
   }
   toggleForm.addEventListener("click", toggleLoginRegister);
 
-  // Render messages with edit/delete buttons
   function renderMessages(msgs) {
     conversationArea.innerHTML = "";
 
@@ -107,29 +104,24 @@ function boot_up_app(app) {
       const messageBubble = document.createElement("div");
       messageBubble.className = msg.user === user ? "message sent" : "message received";
 
-      // Message text container
       const messageText = document.createElement("div");
       messageText.className = "message-text";
       messageText.textContent = `${msg.user}: ${msg.text}`;
 
       messageBubble.appendChild(messageText);
 
-      // Edit and delete buttons container
-      const canEditDelete =
-        isAdmin || (msg.user === user);
+      const canEditDelete = isAdmin || (msg.user === user);
 
       if (canEditDelete) {
         const btnContainer = document.createElement("div");
         btnContainer.className = "message-buttons";
 
-        // Edit button
         const editBtn = document.createElement("button");
         editBtn.className = "msg-btn";
         editBtn.textContent = "Edit";
         editBtn.addEventListener("click", () => startEditingMessage(msg, messageBubble, messageText, btnContainer));
         btnContainer.appendChild(editBtn);
 
-        // Delete button
         const deleteBtn = document.createElement("button");
         deleteBtn.className = "msg-btn";
         deleteBtn.textContent = "Delete";
@@ -142,14 +134,12 @@ function boot_up_app(app) {
       conversationArea.appendChild(messageBubble);
     });
 
-    // Scroll to bottom after rendering unless user manually scrolled up
     if (isScrolledNearBottom()) {
       scrollToBottom();
       hideScrollButton();
     }
   }
 
-  // Check if scroll is near bottom (within 50px)
   function isScrolledNearBottom() {
     return conversationArea.scrollHeight - conversationArea.scrollTop - conversationArea.clientHeight < 50;
   }
@@ -166,8 +156,9 @@ function boot_up_app(app) {
     scrollToBottomBtn.style.display = "none";
   }
 
-  // Fetch messages from backend
   async function fetchMessages() {
+    if (isEditingMessage) return;
+
     try {
       const response = await fetch(`${backendUrl}/messages`);
       const data = await response.json();
@@ -191,7 +182,6 @@ function boot_up_app(app) {
     }
   }
 
-  // Send new message
   async function sendMessage() {
     const text = messageInput.value.trim();
     if (!text || !user) return;
@@ -223,19 +213,16 @@ function boot_up_app(app) {
     }
   }
 
-  // Start editing a message
   function startEditingMessage(msg, messageBubble, messageText, btnContainer) {
-    // Hide text and buttons
+    isEditingMessage = true;
     messageText.style.display = "none";
     btnContainer.style.display = "none";
 
-    // Create edit textarea
     const editTextarea = document.createElement("textarea");
     editTextarea.className = "edit-input";
     editTextarea.value = msg.text;
     editTextarea.rows = 2;
 
-    // Create save and cancel buttons
     const controls = document.createElement("div");
     controls.className = "edit-controls";
 
@@ -285,6 +272,8 @@ function boot_up_app(app) {
         }
       } catch {
         alert("Network error.");
+      } finally {
+        isEditingMessage = false;
       }
     });
 
@@ -293,121 +282,10 @@ function boot_up_app(app) {
       controls.remove();
       messageText.style.display = "";
       btnContainer.style.display = "";
+      isEditingMessage = false;
     });
   }
 
-  // Add a flag to track whether editing is in progress
-let isEditingMessage = false;
-
-// Start editing a message
-function startEditingMessage(msg, messageBubble, messageText, btnContainer) {
-  // Set the editing flag to true
-  isEditingMessage = true;
-
-  // Hide text and buttons
-  messageText.style.display = "none";
-  btnContainer.style.display = "none";
-
-  // Create edit textarea
-  const editTextarea = document.createElement("textarea");
-  editTextarea.className = "edit-input";
-  editTextarea.value = msg.text;
-  editTextarea.rows = 2;
-
-  // Create save and cancel buttons
-  const controls = document.createElement("div");
-  controls.className = "edit-controls";
-
-  const saveBtn = document.createElement("button");
-  saveBtn.className = "msg-btn";
-  saveBtn.textContent = "Save";
-
-  const cancelBtn = document.createElement("button");
-  cancelBtn.className = "msg-btn";
-  cancelBtn.textContent = "Cancel";
-
-  controls.appendChild(saveBtn);
-  controls.appendChild(cancelBtn);
-
-  messageBubble.appendChild(editTextarea);
-  messageBubble.appendChild(controls);
-
-  saveBtn.addEventListener("click", async () => {
-    const newText = editTextarea.value.trim();
-    if (!newText) {
-      alert("Message cannot be empty.");
-      return;
-    }
-    const authUsername = user;
-    const authPassword = isAdmin ? adminPassword : passwordInput.value;
-    if (!authPassword && !isAdmin) {
-      alert("Password required to edit message.");
-      return;
-    }
-    try {
-      const res = await fetch(`${backendUrl}/edit_message`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: authUsername,
-          password: authPassword,
-          message_id: msg.id,
-          new_text: newText,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        msg.text = newText;
-        renderMessages(messages);
-      } else {
-        alert(data.error || "Failed to edit message.");
-      }
-    } catch {
-      alert("Network error.");
-    } finally {
-      // Reset the editing flag and resume refreshing
-      isEditingMessage = false;
-    }
-  });
-
-  cancelBtn.addEventListener("click", () => {
-    editTextarea.remove();
-    controls.remove();
-    messageText.style.display = "";
-    btnContainer.style.display = "";
-    // Reset the editing flag and resume refreshing
-    isEditingMessage = false;
-  });
-}
-
-// Update the fetchMessages function to respect the editing flag
-async function fetchMessages() {
-  if (isEditingMessage) return; // Skip refreshing if editing is in progress
-
-  try {
-    const response = await fetch(`${backendUrl}/messages`);
-    const data = await response.json();
-    if (response.ok && data) {
-      messages = data;
-      localStorage.setItem("nova-messages", JSON.stringify(data));
-      renderMessages(data);
-    } else {
-      const cached = localStorage.getItem("nova-messages");
-      if (cached) {
-        messages = JSON.parse(cached);
-        renderMessages(messages);
-      }
-    }
-  } catch {
-    const cached = localStorage.getItem("nova-messages");
-    if (cached) {
-      messages = JSON.parse(cached);
-      renderMessages(messages);
-    }
-  }
-}
-
-  // Delete a message
   async function deleteMessage(messageId) {
     const isOwnMessage = messages.find((m) => m.id === messageId)?.user === user;
 
@@ -434,16 +312,12 @@ async function fetchMessages() {
         alert("Network error.");
       }
     } else if (isOwnMessage) {
-      if (!confirm("Are you sure you want to delete your message?")) return;
-      // Non-admin users cannot delete messages via API in backend currently
-      // So you might want to add an endpoint for that, or disallow here
       alert("You do not have permission to delete messages. Ask admin.");
     } else {
       alert("You can only delete your own messages.");
     }
   }
 
-  // Submit login or register
   async function submitAuth() {
     showError("");
     const username = usernameInput.value.trim();
@@ -469,7 +343,7 @@ async function fetchMessages() {
           user = data.username;
           isAdmin = data.admin === true;
           if (isAdmin) {
-            adminPassword = password; // store admin password for admin API calls
+            adminPassword = password;
             adminPanelButton.style.display = "inline-block";
           } else {
             adminPanelButton.style.display = "none";
@@ -536,33 +410,79 @@ async function fetchMessages() {
       }
       userList.innerHTML = "";
       data.forEach((username) => {
-        if (username === "admin") return; // don't show admin
+        if (username === "admin") return;
         const li = document.createElement("li");
-        li.style.marginBottom = "6px";
-        li.textContent = username + " ";
-  
-        // Add Delete User Button
+        li.style.marginBottom = "12px";
+        li.style.paddingBottom = "12px";
+        li.style.borderBottom = "1px solid #444";
+        
+        const usernameSpan = document.createElement("span");
+        usernameSpan.textContent = username;
+        usernameSpan.style.fontWeight = "bold";
+        usernameSpan.style.marginRight = "10px";
+        li.appendChild(usernameSpan);
+
+        const btnContainer = document.createElement("div");
+        btnContainer.style.display = "flex";
+        btnContainer.style.flexDirection = "column";
+        btnContainer.style.gap = "6px";
+        btnContainer.style.marginTop = "6px";
+
+        // Delete User Button
         const delBtn = document.createElement("button");
-        delBtn.textContent = "Delete";
-        delBtn.style.marginLeft = "10px";
+        delBtn.textContent = "Delete User";
         delBtn.style.background = "#b22222";
         delBtn.style.color = "white";
         delBtn.style.border = "none";
-        delBtn.style.cursor = "pointer";
+        delBtn.style.padding = "6px 12px";
+        delBtn.style.borderRadius = "4px";
         delBtn.addEventListener("click", () => deleteUser(username));
-        li.appendChild(delBtn);
-  
-        // Add Change Password Button
+
+        // View Password Button
+        const viewPasswordBtn = document.createElement("button");
+        viewPasswordBtn.textContent = "View Password";
+        viewPasswordBtn.style.background = "#6c757d";
+        viewPasswordBtn.style.color = "white";
+        viewPasswordBtn.style.border = "none";
+        viewPasswordBtn.style.padding = "6px 12px";
+        viewPasswordBtn.style.borderRadius = "4px";
+        viewPasswordBtn.addEventListener("click", async () => {
+          try {
+            const response = await fetch(
+              `${backendUrl}/admin/view_passwords?admin_username=admin&admin_password=${encodeURIComponent(adminPassword)}`
+            );
+            const data = await response.json();
+            if (!Array.isArray(data)) {
+              alert(data.error || "Failed to load password.");
+              return;
+            }
+            const userData = data.find(u => u.username === username);
+            if (userData) {
+              alert(`Password for ${username}: ${userData.password}`);
+            } else {
+              alert("Password not found for this user.");
+            }
+          } catch (e) {
+            alert("Error loading password.");
+            console.error("Error loading password:", e);
+          }
+        });
+
+        // Change Password Button
         const changePasswordBtn = document.createElement("button");
         changePasswordBtn.textContent = "Change Password";
-        changePasswordBtn.style.marginLeft = "10px";
         changePasswordBtn.style.background = "#007bff";
         changePasswordBtn.style.color = "white";
         changePasswordBtn.style.border = "none";
-        changePasswordBtn.style.cursor = "pointer";
+        changePasswordBtn.style.padding = "6px 12px";
+        changePasswordBtn.style.borderRadius = "4px";
         changePasswordBtn.addEventListener("click", () => changePassword(username));
-        li.appendChild(changePasswordBtn);
-  
+
+        btnContainer.appendChild(delBtn);
+        btnContainer.appendChild(viewPasswordBtn);
+        btnContainer.appendChild(changePasswordBtn);
+
+        li.appendChild(btnContainer);
         userList.appendChild(li);
       });
     } catch (e) {
@@ -648,7 +568,6 @@ async function fetchMessages() {
     });
   }
 
-  // Scroll to bottom button logic
   conversationArea.addEventListener("scroll", () => {
     if (isScrolledNearBottom()) {
       hideScrollButton();
@@ -662,7 +581,6 @@ async function fetchMessages() {
     hideScrollButton();
   });
 
-  // Show the main app UI and fetch messages
   function showApp() {
     loginScreen.style.display = "none";
     mainArea.style.display = "flex";
@@ -670,7 +588,6 @@ async function fetchMessages() {
     startPolling();
   }
 
-  // Hide the main app UI and show login screen
   function hideApp() {
     loginScreen.style.display = "flex";
     mainArea.style.display = "none";
@@ -679,7 +596,6 @@ async function fetchMessages() {
     stopPolling();
   }
 
-  // Poll messages every 5 seconds
   let pollInterval = null;
   function startPolling() {
     if (pollInterval) clearInterval(pollInterval);
@@ -690,27 +606,6 @@ async function fetchMessages() {
     pollInterval = null;
   }
 
-  const viewPasswordsBtn = app.querySelector("#viewPasswordsBtn");
-
-viewPasswordsBtn.addEventListener("click", async () => {
-  try {
-    const response = await fetch(
-      `${backendUrl}/admin/view_passwords?admin_username=admin&admin_password=${encodeURIComponent(adminPassword)}`
-    );
-    const data = await response.json();
-    if (!Array.isArray(data)) {
-      alert(data.error || "Failed to load passwords.");
-      return;
-    }
-    const passwords = data.map((user) => `${user.username}: ${user.password}`).join("\n");
-    alert(`Passwords:\n${passwords}`);
-  } catch (e) {
-    alert("Error loading passwords.");
-    console.error("Error loading passwords:", e);
-  }
-});
-
-  // Auto-login if stored creds exist
   (function tryAutoLogin() {
     const savedUser = localStorage.getItem("nova-user");
     const savedAdmin = localStorage.getItem("nova-is-admin") === "true";
@@ -718,7 +613,6 @@ viewPasswordsBtn.addEventListener("click", async () => {
       user = savedUser;
       isAdmin = savedAdmin;
       if (isAdmin) {
-        // Admin password cannot be saved for security reasons, so admin must login again
         showError("Please login as admin again for admin access.");
         user = null;
         isAdmin = false;
@@ -733,7 +627,6 @@ viewPasswordsBtn.addEventListener("click", async () => {
     }
   })();
 
-  // Auto-expand textarea height on input
   messageInput.addEventListener("input", () => {
     messageInput.style.height = "auto";
     messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + "px";

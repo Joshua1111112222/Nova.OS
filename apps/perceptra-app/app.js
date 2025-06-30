@@ -6,7 +6,7 @@ export const app = _component("perceptra-app", html`
     <button id="closeAppBtn" title="Close App" style="float:right;">✕</button>
   </header-title>
 
-  <iframe id="perceptraIframe" src="https://your-pwa-link.example.com" style="width:100%; height:calc(100% - 40px); border:none;"></iframe>
+  <iframe id="perceptraIframe" src="https://joshua1111112222.github.io/Perceptra/" style="width:100%; height:calc(100% - 40px); border:none;"></iframe>
 `, boot_up_app);
 
 function boot_up_app(app) {

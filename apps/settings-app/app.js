@@ -9,6 +9,7 @@ export const app = _component("settings-app",html`
 			<option>evening_skies.png</option>
 			<option>galaxy_nova.png</option>
 			<option>nova.png</option>
+			<option>dragon.png</option>
 			<option>wallpaper_old.png</option>
 			<option>glowing_bars.jpg</option>
 			<option>pink_swirl.png</option>

@@ -1,56 +1,48 @@
 export const app_name = "perceptra-app";
 
-export const app = _component("perceptra-app", html`
-  <div id="perceptraContainer" style="position: relative; width: 100%; height: 100%; background: #000;">
-    <!-- Invisible tap overlay for triple tap -->
-    <div id="tapOverlay"
-      style="
-        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-        z-index: 10; background: transparent;">
-    </div>
+export const app = _component(app_name, html`
+  <iframe id="perceptraIframe" src="https://your-pwa-link-here" style="
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    z-index: 1;
+  "></iframe>
 
-    <!-- Embedded iframe filling 100% -->
-    <iframe 
-      id="perceptraIframe"
-      src="https://joshua1111112222.github.io/Perceptra/"
-      style="width: 100%; height: 100%; border: none; display: block; background: #000;">
-    </iframe>
-  </div>
-`, boot_up_app);
+  <button id="closeButton" style="
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 9999;
+    background: rgba(0,0,0,0.8);
+    color: white;
+    border: none;
+    padding: 10px 14px;
+    border-radius: 5px;
+    font-size: 14px;
+    cursor: pointer;
+  ">✕</button>
+`);
 
-function boot_up_app(app) {
-  const tapOverlay = app.querySelector("#tapOverlay");
+export function boot_up_app(app) {
+  const closeButton = app.querySelector("#closeButton");
+  closeButton.addEventListener("click", () => app.remove());
 
-  // Triple tap detection — works for mouse + touch
+  // Triple tap anywhere
   let tapCount = 0;
-  let lastTapTime = 0;
-  const TAP_DELAY = 600; // ms
+  let lastTap = 0;
 
-  function registerTap() {
+  window.addEventListener("touchend", () => {
     const now = Date.now();
-    if (now - lastTapTime < TAP_DELAY) {
+    if (now - lastTap < 400) {
       tapCount++;
+      if (tapCount >= 3) {
+        app.remove();
+      }
     } else {
       tapCount = 1;
     }
-    lastTapTime = now;
-
-    console.log(`[Perceptra] Tap #${tapCount}`);
-
-    if (tapCount >= 3) {
-      console.log("[Perceptra] Triple tap detected — closing app");
-      app.style.display = "none";
-      tapCount = 0;
-      lastTapTime = 0;
-    }
-  }
-
-  tapOverlay.addEventListener("touchend", registerTap);
-  tapOverlay.addEventListener("click", registerTap);
-
-  // Optional: expose open for AppHandler
-  app.open = () => {
-    console.log("[Perceptra] Opening app");
-    app.style.display = "block";
-  };
+    lastTap = now;
+  });
 }

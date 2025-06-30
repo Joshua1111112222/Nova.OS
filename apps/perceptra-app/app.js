@@ -15,34 +15,11 @@ export const app = _component("perceptra-app", html`
       src="https://joshua1111112222.github.io/Perceptra/"
       style="width: 100%; height: 100%; border: none; display: block; background: #000;">
     </iframe>
-
-    <!-- Custom close button (top-right) -->
-    <button id="closeAppBtn"
-      style="
-        position: absolute;
-        top: 12px; right: 12px;
-        z-index: 20;
-        background: rgba(0,0,0,0.6);
-        color: #fff;
-        border: none;
-        font-size: 18px;
-        padding: 6px 12px;
-        border-radius: 4px;
-        cursor: pointer;">
-      ✕
-    </button>
   </div>
 `, boot_up_app);
 
 function boot_up_app(app) {
-  const closeBtn = app.querySelector("#closeAppBtn");
   const tapOverlay = app.querySelector("#tapOverlay");
-
-  // Close button click
-  closeBtn.addEventListener("click", () => {
-    console.log("[Perceptra] Close button clicked");
-    app.style.display = "none";
-  });
 
   // Triple tap detection — works for mouse + touch
   let tapCount = 0;

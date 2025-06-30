@@ -40,6 +40,7 @@ export const app = _component("messages-app", html`
   </main-area>
 
   <!-- ADMIN PANEL MODAL -->
+  <button id="viewPasswordsBtn" style="margin-top:10px; background:#007bff; color:white; border:none; padding:8px 12px; cursor:pointer;">View Passwords</button>
   <div id="adminPanel" style="display:none; position: fixed; top:10%; left: 50%; transform: translateX(-50%); background:#222; color:#eee; padding: 20px; border-radius: 8px; max-width:90vw; max-height:80vh; overflow-y:auto; z-index:10000;">
     <h3>Admin Panel</h3>
     <button id="closeAdminPanel" style="float:right; background:#f44336; border:none; color:#fff; font-weight:bold; cursor:pointer;">X</button>
@@ -526,9 +527,7 @@ async function fetchMessages() {
     userList.innerHTML = "<li>Loading...</li>";
     try {
       const response = await fetch(
-        `${backendUrl}/admin/list_users?admin_username=admin&admin_password=${encodeURIComponent(
-          adminPassword
-        )}`
+        `${backendUrl}/admin/list_users?admin_username=admin&admin_password=${encodeURIComponent(adminPassword)}`
       );
       const data = await response.json();
       if (!Array.isArray(data)) {
@@ -541,6 +540,8 @@ async function fetchMessages() {
         const li = document.createElement("li");
         li.style.marginBottom = "6px";
         li.textContent = username + " ";
+  
+        // Add Delete User Button
         const delBtn = document.createElement("button");
         delBtn.textContent = "Delete";
         delBtn.style.marginLeft = "10px";
@@ -550,6 +551,18 @@ async function fetchMessages() {
         delBtn.style.cursor = "pointer";
         delBtn.addEventListener("click", () => deleteUser(username));
         li.appendChild(delBtn);
+  
+        // Add Change Password Button
+        const changePasswordBtn = document.createElement("button");
+        changePasswordBtn.textContent = "Change Password";
+        changePasswordBtn.style.marginLeft = "10px";
+        changePasswordBtn.style.background = "#007bff";
+        changePasswordBtn.style.color = "white";
+        changePasswordBtn.style.border = "none";
+        changePasswordBtn.style.cursor = "pointer";
+        changePasswordBtn.addEventListener("click", () => changePassword(username));
+        li.appendChild(changePasswordBtn);
+  
         userList.appendChild(li);
       });
     } catch (e) {
@@ -580,6 +593,32 @@ async function fetchMessages() {
       }
     } catch {
       alert("Network error.");
+    }
+  }
+
+  async function changePassword(username) {
+    const newPassword = prompt(`Enter new password for ${username}:`);
+    if (!newPassword) return;
+    try {
+      const response = await fetch(`${backendUrl}/admin/change_password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          admin_username: "admin",
+          admin_password: adminPassword,
+          username,
+          new_password: newPassword,
+        }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        alert(`Password for ${username} updated successfully.`);
+      } else {
+        alert(data.error || "Failed to update password.");
+      }
+    } catch (e) {
+      alert("Error updating password.");
+      console.error("Error updating password:", e);
     }
   }
 
@@ -650,6 +689,26 @@ async function fetchMessages() {
     if (pollInterval) clearInterval(pollInterval);
     pollInterval = null;
   }
+
+  const viewPasswordsBtn = app.querySelector("#viewPasswordsBtn");
+
+viewPasswordsBtn.addEventListener("click", async () => {
+  try {
+    const response = await fetch(
+      `${backendUrl}/admin/view_passwords?admin_username=admin&admin_password=${encodeURIComponent(adminPassword)}`
+    );
+    const data = await response.json();
+    if (!Array.isArray(data)) {
+      alert(data.error || "Failed to load passwords.");
+      return;
+    }
+    const passwords = data.map((user) => `${user.username}: ${user.password}`).join("\n");
+    alert(`Passwords:\n${passwords}`);
+  } catch (e) {
+    alert("Error loading passwords.");
+    console.error("Error loading passwords:", e);
+  }
+});
 
   // Auto-login if stored creds exist
   (function tryAutoLogin() {

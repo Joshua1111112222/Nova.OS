@@ -59,13 +59,10 @@ function boot_up_app(app) {
   const closeButton = app.querySelector("#closeButton");
   const iframe = app.querySelector("iframe");
 
-  // Simple close - let the framework handle it
+  // Nuclear option - reload the whole page
   closeButton.addEventListener("click", () => {
-    // Get the host element (the custom element itself)
-    const host = app.getRootNode().host;
-    if (host) {
-      host.remove();
-    }
+    console.log("Nuclear option - reloading page");
+    window.location.reload();
   });
 
   // Triple tap detection like your other apps probably use

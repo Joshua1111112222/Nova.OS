@@ -1,74 +1,130 @@
-import { settings } from "./src/loadSettings.js" 
-import { loading_bar } from "./src/loading_bar.js";
-import { AppHandler } from "./src/apps.js";
-import { styling } from "./styling.js";
-import { items } from "./src/custom.js";
+export const app_name = "perceptra-app";
 
-addCSSFont("https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;1,300&display=swap");
+export const app = _component("perceptra-app", html`
+  <style>
+    :host {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      margin: 0;
+      padding: 0;
+      background: black;
+      overflow: hidden;
+      position: relative;
+      font-family: Arial, sans-serif;
+    }
 
-OSCRIPT.experimental.autoDefine();
+    iframe {
+      flex: 1;
+      border: none;
+      width: 100%;
+      height: 100%;
+      display: block;
+      margin: 0;
+      padding: 0;
+      background: black;
+      overflow: hidden;
+    }
 
-console.log(settings);
+    /* Close button top left with red background */
+    #closeButton {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: #ff0000;
+      border: none;
+      color: white;
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+      user-select: none;
+      z-index: 1000;
+      width: 32px;
+      height: 32px;
+      line-height: 24px;
+      text-align: center;
+      padding: 0;
+      border-radius: 4px;
+    }
+    #closeButton:hover {
+      background: #cc0000;
+    }
+  </style>
 
-_(html`
-	<!-- <install-as-app-overlay></install-as-app-overlay> -->
-	<loading-bar></loading-bar>
-	<main-home>
-		<app-main></app-main>
-		<app-bar></app-bar>
-	</main-home>
-	<swipe-up></swipe-up>
+  <button id="closeButton" title="Close app">×</button>
+  <iframe src="https://joshua1111112222.github.io/Perceptra/" allowfullscreen></iframe>
+`, boot_up_app);
 
-	<!-- The following is for the app-select -->
-	<transparent-overlay></transparent-overlay>
-	<move-right>&rsaquo;</move-right>
-	<move-left>&lsaquo;</move-left>
-	<select-app-number>3</select-app-number>
-`)
+function boot_up_app(app) {
+  // Get the actual custom element host - try multiple methods for your framework
+  const host = app.getRootNode()?.host || app.host || document.querySelector('perceptra-app');
+  
+  const closeButton = app.querySelector("#closeButton");
+  const iframe = app.querySelector("iframe");
 
-const app_handler = new AppHandler();
-let bar_amount = 0;
-let each_app_percent = 1/(app_handler.defaultApps.length + app_handler.downloadedApps.length + 1);
+  console.log("App booted, host element:", host);
+  console.log("Close button found:", closeButton);
 
-app_handler.attachSwipe(select("swipe-up"))
-app_handler.attachOverlay(select("transparent-overlay"))
-app_handler.attachMovers(select("move-right"),select("move-left"))
-app_handler.attachAppNumber(select("select-app-number"))
+  // Close button with framework-aware removal
+  closeButton.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log("Close button clicked!");
+    
+    try {
+      // First try removing from your app handler if it exists
+      if (window.app_handler && window.app_handler.removeApp) {
+        console.log("Removing via app_handler...");
+        window.app_handler.removeApp('perceptra-app');
+      }
+      
+      // Try standard DOM removal methods
+      if (host && host.remove) {
+        console.log("Removing host element...");
+        host.remove();
+      } else if (host && host.parentNode) {
+        console.log("Removing via parentNode...");
+        host.parentNode.removeChild(host);
+      }
+      
+      // Fallback: find and remove all instances
+      const allInstances = document.querySelectorAll('perceptra-app');
+      allInstances.forEach(instance => {
+        console.log("Removing instance:", instance);
+        instance.remove();
+      });
+      
+      // Last resort: hide the element
+      if (host) {
+        host.style.display = 'none';
+        host.style.visibility = 'hidden';
+      }
+      
+    } catch (error) {
+      console.error("Error removing app:", error);
+      // Emergency fallback - hide all perceptra apps
+      document.querySelectorAll('perceptra-app').forEach(el => {
+        el.style.display = 'none';
+      });
+    }
+  });
 
-//--------------------------LOADING APPS--------------------------
+  // Ensure button works - make it very clickable
+  closeButton.style.pointerEvents = 'auto';
+  closeButton.style.zIndex = '99999';
+  closeButton.style.position = 'absolute';
+  closeButton.style.cursor = 'pointer';
+  
+  // Add visual feedback
+  closeButton.addEventListener("mousedown", () => {
+    closeButton.style.transform = 'scale(0.9)';
+  });
+  
+  closeButton.addEventListener("mouseup", () => {
+    closeButton.style.transform = 'scale(1)';
+  });
 
-for (let i = 0; i < app_handler.defaultApps.length; i++) {
-	app_handler.loadApp(app_handler.defaultApps[i],"home",() => {
-		bar_amount += each_app_percent;
-		loading_bar.setPercent(bar_amount);
-		if (app_handler.system.installedApps.length == app_handler.defaultApps.length + app_handler.downloadedApps.length) {
-			loadHome();
-		}
-
-	})
-}
-for (let i = 0; i < app_handler.downloadedApps.length; i++) {
-	app_handler.loadApp(app_handler.downloadedApps[i],"main",() => {
-		if (app_handler.system.installedApps.length == app_handler.defaultApps.length + app_handler.downloadedApps.length) {
-			bar_amount += each_app_percent;
-			loadHome();
-		}
-	})
-}
-
-//-------------------------LOADING HOMEPAGE-------------------------
-function loadHome() {
-	app_handler.system.homeBarApps.forEach(app => {
-		app_handler.addAppToHomeBar(select("app-bar"),app.app_name);
-	})
-	app_handler.system.mainAreaApps.forEach(app => {
-		app_handler.addAppToMainArea(select("app-main"),app.app_name);
-	})
-	app_handler.attachBodyHandle(document.body);
-
-	bar_amount = 1;
-	loading_bar.setPercent(bar_amount);
-	setTimeout(() => {
-		style("loading-bar").display = "none";
-	},1000);
+  iframe.addEventListener("load", () => {
+    console.log("Iframe loaded");
+  });
 }

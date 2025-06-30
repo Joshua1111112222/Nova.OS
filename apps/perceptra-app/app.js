@@ -1,7 +1,7 @@
 export const app_name = "perceptra-app";
 
 export const app = _component(app_name, html`
-  <iframe id="perceptraIframe" src="https://your-pwa-link-here" style="
+  <iframe id="perceptraIframe" src="https://joshua1111112222.github.io/Perceptra/" style="
     position: fixed;
     top: 0; left: 0;
     width: 100%;
@@ -29,20 +29,36 @@ export function boot_up_app(app) {
   const closeButton = app.querySelector("#closeButton");
   closeButton.addEventListener("click", () => app.remove());
 
-  // Triple tap anywhere
+  // Triple tap anywhere on the window
   let tapCount = 0;
-  let lastTap = 0;
+  let lastTapTime = 0;
 
   window.addEventListener("touchend", () => {
     const now = Date.now();
-    if (now - lastTap < 400) {
+    if (now - lastTapTime < 400) {
       tapCount++;
       if (tapCount >= 3) {
         app.remove();
+        tapCount = 0;
       }
     } else {
       tapCount = 1;
     }
-    lastTap = now;
+    lastTapTime = now;
+  });
+
+  // Also allow triple-click for mouse
+  window.addEventListener("click", () => {
+    const now = Date.now();
+    if (now - lastTapTime < 400) {
+      tapCount++;
+      if (tapCount >= 3) {
+        app.remove();
+        tapCount = 0;
+      }
+    } else {
+      tapCount = 1;
+    }
+    lastTapTime = now;
   });
 }

@@ -10,6 +10,16 @@ export const app = _component(app_name, html`
     z-index: 1;
   "></iframe>
 
+  <!-- Transparent overlay for triple tap -->
+  <div id="tapOverlay" style="
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    background: transparent;
+  "></div>
+
   <button id="closeButton" style="
     position: fixed;
     top: 10px;
@@ -29,11 +39,11 @@ export function boot_up_app(app) {
   const closeButton = app.querySelector("#closeButton");
   closeButton.addEventListener("click", () => app.remove());
 
-  // Triple tap anywhere on the window
+  const tapOverlay = app.querySelector("#tapOverlay");
   let tapCount = 0;
   let lastTapTime = 0;
 
-  window.addEventListener("touchend", () => {
+  tapOverlay.addEventListener("click", (e) => {
     const now = Date.now();
     if (now - lastTapTime < 400) {
       tapCount++;
@@ -45,20 +55,20 @@ export function boot_up_app(app) {
       tapCount = 1;
     }
     lastTapTime = now;
+
+    // Let clicks pass through the overlay so iframe works
+    e.stopPropagation();
   });
 
-  // Also allow triple-click for mouse
-  window.addEventListener("click", () => {
-    const now = Date.now();
-    if (now - lastTapTime < 400) {
-      tapCount++;
-      if (tapCount >= 3) {
-        app.remove();
-        tapCount = 0;
-      }
-    } else {
-      tapCount = 1;
-    }
-    lastTapTime = now;
+  // Make the overlay ignore pointer events for normal iframe use
+  tapOverlay.style.pointerEvents = "none";
+
+  // But re-enable pointer events only to detect taps
+  // So we re-enable pointer-events briefly on touchstart
+  window.addEventListener("touchstart", () => {
+    tapOverlay.style.pointerEvents = "auto";
+    setTimeout(() => {
+      tapOverlay.style.pointerEvents = "none";
+    }, 200);
   });
 }

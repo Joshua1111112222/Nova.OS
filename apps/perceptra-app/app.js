@@ -1,21 +1,36 @@
 export const app_name = "perceptra-app";
 
 export const app = _component("perceptra-app", html`
-  <header-title>
-    Perceptra
-    <button id="closeAppBtn" title="Close App" style="float:right;">✕</button>
-  </header-title>
+  <div id="perceptraContainer" style="position: relative; width: 100%; height: 100%; background: #000;">
+    <!-- Invisible tap overlay for triple tap -->
+    <div id="tapOverlay"
+      style="
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        z-index: 10; background: transparent;">
+    </div>
 
-  <div id="iframeWrapper" style="width:100%; height:calc(100% - 40px); position:relative;">
+    <!-- Embedded iframe filling 100% -->
     <iframe 
       id="perceptraIframe"
       src="https://joshua1111112222.github.io/Perceptra/"
-      style="width:100%; height:100%; border:none; display:block;"></iframe>
-    <!-- Invisible overlay to capture triple taps -->
-    <div id="tapOverlay"
+      style="width: 100%; height: 100%; border: none; display: block; background: #000;">
+    </iframe>
+
+    <!-- Custom close button (top-right) -->
+    <button id="closeAppBtn"
       style="
-        position:absolute; top:0; left:0; width:100%; height:100%;
-        z-index:10; background:transparent;"></div>
+        position: absolute;
+        top: 12px; right: 12px;
+        z-index: 20;
+        background: rgba(0,0,0,0.6);
+        color: #fff;
+        border: none;
+        font-size: 18px;
+        padding: 6px 12px;
+        border-radius: 4px;
+        cursor: pointer;">
+      ✕
+    </button>
   </div>
 `, boot_up_app);
 
@@ -23,7 +38,7 @@ function boot_up_app(app) {
   const closeBtn = app.querySelector("#closeAppBtn");
   const tapOverlay = app.querySelector("#tapOverlay");
 
-  // Manual close button
+  // Close button click
   closeBtn.addEventListener("click", () => {
     console.log("[Perceptra] Close button clicked");
     app.style.display = "none";
@@ -53,11 +68,10 @@ function boot_up_app(app) {
     }
   }
 
-  // Attach to invisible overlay above iframe
   tapOverlay.addEventListener("touchend", registerTap);
   tapOverlay.addEventListener("click", registerTap);
 
-  // Optional: expose an open() for your AppHandler
+  // Optional: expose open for AppHandler
   app.open = () => {
     console.log("[Perceptra] Opening app");
     app.style.display = "block";

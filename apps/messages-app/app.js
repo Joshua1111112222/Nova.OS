@@ -229,7 +229,7 @@ function boot_up_app(app) {
   
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: "<Your VAPID Public Key>" // Replace with your VAPID public key
+        applicationServerKey: "BDz6ACEKyhNytgzH-p3n9C2L1cmvWLrNnw2_9ThDvCByYm0o-ONdJCR7AIo3zjEL2RvnUtldkBWRO06bzT1eLhU" // Replace with your VAPID public key
       });
   
       // Send subscription to backend

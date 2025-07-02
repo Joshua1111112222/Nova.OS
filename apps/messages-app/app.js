@@ -360,14 +360,14 @@ function boot_up_app(app) {
     showError("");
     const username = usernameInput.value.trim();
     const password = passwordInput.value.trim();
-
+  
     if (!username || !password) {
       showError("Please enter username and password.");
       return;
     }
-
+  
     const endpoint = isLogin ? "/login" : "/register";
-
+  
     try {
       const res = await fetch(`${backendUrl}${endpoint}`, {
         method: "POST",
@@ -375,17 +375,20 @@ function boot_up_app(app) {
         body: JSON.stringify({ username, password }),
       });
       const data = await res.json();
-
+  
       if (data.success) {
         if (isLogin) {
           user = data.username;
           isAdmin = data.admin === true;
+  
           if (isAdmin) {
             adminPassword = password;
             adminPanelButton.style.display = "inline-block";
+            localStorage.setItem("nova-admin-password", password); // Store admin password
           } else {
             adminPanelButton.style.display = "none";
           }
+  
           localStorage.setItem("nova-user", user);
           localStorage.setItem("nova-is-admin", isAdmin ? "true" : "false");
           showApp();

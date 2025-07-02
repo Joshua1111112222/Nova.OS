@@ -1,3 +1,4 @@
+// Existing code for caching...
 const CACHE_NAME = 'nova-cache-v1';
 const FILES_TO_CACHE = [
   '/', // Root
@@ -59,5 +60,25 @@ self.addEventListener('fetch', (event) => {
     caches.match(event.request).then((response) => {
       return response || fetch(event.request);
     })
+  );
+});
+
+// Push Notification Logic
+self.addEventListener("push", (event) => {
+  const data = event.data.json();
+  const title = data.title || "Messages App";
+  const options = {
+    body: data.body || "You have a new message!",
+    icon: "./apps/messages-app/icon.png", // Path to your app icon
+    badge: "./apps/messages-app/icon.png", // Path to badge icon
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.openWindow("./apps/messages-app/") // Redirect to your app
   );
 });

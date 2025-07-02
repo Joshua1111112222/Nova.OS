@@ -185,23 +185,33 @@ function boot_up_app(app) {
   async function sendMessage() {
     const text = messageInput.value.trim();
     if (!text || !user) return;
-
+  
     progressBar.style.width = "30%";
-
+  
     try {
       const response = await fetch(`${backendUrl}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user, text }),
       });
-
+  
       progressBar.style.width = "60%";
-
+  
       if (response.ok) {
         messageInput.value = "";
         await fetchMessages();
         progressBar.style.width = "100%";
         setTimeout(() => (progressBar.style.width = "0%"), 500);
+  
+        // Send notification to all users
+        await fetch(`${backendUrl}/send-notification`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: "New Message",
+            body: `${user}: ${text}`,
+          }),
+        });
       } else {
         const err = await response.json();
         alert(err.error || "Failed to send message.");
@@ -212,6 +222,34 @@ function boot_up_app(app) {
       progressBar.style.width = "0%";
     }
   }
+
+  async function subscribeToPushNotifications() {
+    if ("serviceWorker" in navigator && "PushManager" in window) {
+      const registration = await navigator.serviceWorker.ready;
+  
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: "<Your VAPID Public Key>" // Replace with your VAPID public key
+      });
+  
+      // Send subscription to backend
+      await fetch(`${backendUrl}/subscribe`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(subscription),
+      });
+  
+      console.log("Subscribed to push notifications:", subscription);
+    } else {
+      console.error("Push notifications are not supported in this browser.");
+    }
+  }
+  
+  // Call this function after login
+  submitBtn.addEventListener("click", async () => {
+    await subscribeToPushNotifications();
+    submitAuth();
+  });
 
   function startEditingMessage(msg, messageBubble, messageText, btnContainer) {
     isEditingMessage = true;

@@ -229,7 +229,7 @@ function boot_up_app(app) {
   
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: "BDz6ACEKyhNytgzH-p3n9C2L1cmvWLrNnw2_9ThDvCByYm0o-ONdJCR7AIo3zjEL2RvnUtldkBWRO06bzT1eLhU" // Replace with your VAPID public key
+        applicationServerKey: "BOnz0DjCCHAcB6oFJ4uE_w6YomqD4pywL-lKISysBN9_puPG8Ybb5T1ZyCxlbXZJcF0VhkAfKPXh59mnGCLeNGk" // Replace with your VAPID public key
       });
   
       // Send subscription to backend

@@ -523,14 +523,13 @@ function boot_up_app(app) {
         li.appendChild(btnContainer);
         userList.appendChild(li);
       });
-    } catch (e) {
-      userList.innerHTML = `<li>Error loading users</li>`;
-      console.error("Error loading users:", e);
+    } catch {
+      userList.innerHTML = "<li>Failed to load users.</li>";
     }
   }
 
-  async function deleteUser(usernameToDelete) {
-    if (!confirm(`Are you sure you want to delete user "${usernameToDelete}"? This will delete all their messages.`)) return;
+  async function deleteUser(username) {
+    if (!confirm(`Are you sure you want to delete user ${username}?`)) return;
     try {
       const response = await fetch(`${backendUrl}/admin/delete_user`, {
         method: "POST",
@@ -538,14 +537,13 @@ function boot_up_app(app) {
         body: JSON.stringify({
           admin_username: "admin",
           admin_password: adminPassword,
-          username: usernameToDelete,
+          username,
         }),
       });
       const data = await response.json();
       if (data.success) {
-        alert(`User "${usernameToDelete}" deleted.`);
+        alert(`Deleted user: ${username}`);
         loadUsers();
-        fetchMessages();
       } else {
         alert(data.error || "Failed to delete user.");
       }
@@ -556,7 +554,10 @@ function boot_up_app(app) {
 
   async function changePassword(username) {
     const newPassword = prompt(`Enter new password for ${username}:`);
-    if (!newPassword) return;
+    if (!newPassword) {
+      alert("Password cannot be empty.");
+      return;
+    }
     try {
       const response = await fetch(`${backendUrl}/admin/change_password`, {
         method: "POST",
@@ -570,41 +571,39 @@ function boot_up_app(app) {
       });
       const data = await response.json();
       if (data.success) {
-        alert(`Password for ${username} updated successfully.`);
+        alert(`Password changed for user: ${username}`);
       } else {
-        alert(data.error || "Failed to update password.");
+        alert(data.error || "Failed to change password.");
       }
-    } catch (e) {
-      alert("Error updating password.");
-      console.error("Error updating password:", e);
+    } catch {
+      alert("Network error.");
     }
   }
 
-  if (deleteAllMessagesBtn) {
-    deleteAllMessagesBtn.addEventListener("click", async () => {
-      if (!confirm("Are you sure you want to delete ALL messages? This cannot be undone.")) return;
-      try {
-        const response = await fetch(`${backendUrl}/admin/delete_all_messages`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            admin_username: "admin",
-            admin_password: adminPassword,
-          }),
-        });
-        const data = await response.json();
-        if (data.success) {
-          messages = [];
-          renderMessages(messages);
-          alert("All messages deleted.");
-        } else {
-          alert(data.error || "Failed to delete messages.");
-        }
-      } catch {
-        alert("Network error.");
+  deleteAllMessagesBtn.addEventListener("click", async () => {
+    if (!confirm("Are you sure you want to delete ALL messages? This cannot be undone.")) return;
+
+    try {
+      const response = await fetch(`${backendUrl}/admin/delete_all_messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          admin_username: "admin",
+          admin_password: adminPassword,
+        }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        messages = [];
+        renderMessages(messages);
+        alert("All messages deleted.");
+      } else {
+        alert(data.error || "Failed to delete all messages.");
       }
-    });
-  }
+    } catch {
+      alert("Network error.");
+    }
+  });
 
   conversationArea.addEventListener("scroll", () => {
     if (isScrolledNearBottom()) {
@@ -623,50 +622,41 @@ function boot_up_app(app) {
     loginScreen.style.display = "none";
     mainArea.style.display = "flex";
     fetchMessages();
-    startPolling();
+    scrollToBottom();
   }
 
   function hideApp() {
     loginScreen.style.display = "flex";
     mainArea.style.display = "none";
-    messages = [];
     renderMessages([]);
-    stopPolling();
   }
 
-  let pollInterval = null;
-  function startPolling() {
-    if (pollInterval) clearInterval(pollInterval);
-    pollInterval = setInterval(fetchMessages, 5000);
-  }
-  function stopPolling() {
-    if (pollInterval) clearInterval(pollInterval);
-    pollInterval = null;
-  }
-
-  (function tryAutoLogin() {
-    const savedUser = localStorage.getItem("nova-user");
-    const savedAdmin = localStorage.getItem("nova-is-admin") === "true";
-    if (savedUser) {
-      user = savedUser;
-      isAdmin = savedAdmin;
+  // Try auto-login
+  (async () => {
+    const storedUser = localStorage.getItem("nova-user");
+    const storedAdmin = localStorage.getItem("nova-is-admin");
+    if (storedUser) {
+      user = storedUser;
+      isAdmin = storedAdmin === "true";
       if (isAdmin) {
-        showError("Please login as admin again for admin access.");
-        user = null;
-        isAdmin = false;
-        adminPassword = null;
-        hideApp();
-        return;
+        const pw = prompt("Enter admin password to continue:");
+        if (!pw) {
+          alert("Admin password required.");
+          localStorage.removeItem("nova-user");
+          localStorage.removeItem("nova-is-admin");
+          hideApp();
+          return;
+        }
+        adminPassword = pw;
+        adminPanelButton.style.display = "inline-block";
+      } else {
+        adminPanelButton.style.display = "none";
       }
-      adminPanelButton.style.display = "none";
       showApp();
-    } else {
-      hideApp();
+      await fetchMessages();
     }
   })();
 
-  messageInput.addEventListener("input", () => {
-    messageInput.style.height = "auto";
-    messageInput.style.height = Math.min(messageInput.scrollHeight, 120) + "px";
-  });
+  // Poll for messages every 4 seconds
+  setInterval(fetchMessages, 4000);
 }

@@ -632,30 +632,27 @@ function boot_up_app(app) {
   }
 
   // Try auto-login
-  (async () => {
-    const storedUser = localStorage.getItem("nova-user");
-    const storedAdmin = localStorage.getItem("nova-is-admin");
-    if (storedUser) {
-      user = storedUser;
-      isAdmin = storedAdmin === "true";
-      if (isAdmin) {
-        const pw = prompt("Enter admin password to continue:");
-        if (!pw) {
-          alert("Admin password required.");
-          localStorage.removeItem("nova-user");
-          localStorage.removeItem("nova-is-admin");
-          hideApp();
-          return;
-        }
-        adminPassword = pw;
-        adminPanelButton.style.display = "inline-block";
-      } else {
-        adminPanelButton.style.display = "none";
-      }
-      showApp();
-      await fetchMessages();
+(async () => {
+  const storedUser = localStorage.getItem("nova-user");
+  const storedAdmin = localStorage.getItem("nova-is-admin");
+  const storedAdminPassword = localStorage.getItem("nova-admin-password"); // Store admin password
+
+  if (storedUser) {
+    user = storedUser;
+    isAdmin = storedAdmin === "true";
+
+    if (isAdmin) {
+      adminPassword = storedAdminPassword; // Use stored admin password
+      adminPanelButton.style.display = "inline-block";
+    } else {
+      adminPanelButton.style.display = "none";
     }
-  })();
+
+    showApp();
+    await fetchMessages();
+  }
+})();
+
 
   // Poll for messages every 4 seconds
   setInterval(fetchMessages, 4000);

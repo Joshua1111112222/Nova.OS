@@ -1,10 +1,9 @@
-import { styling } from "./styling.js";
-
 export const app_name = "object-detector-app";
 
 export const app = _component("object-detector-app", html`
   <main-container>
     <top-bar>Nova.OS Custom Object Detector</top-bar>
+    linkrel="stylesheet" href="styles.css">
     
     <camera-container style="position: relative; width: 100%; max-width: 400px; margin: auto;">
       <video id="video" autoplay playsinline muted style="width: 100%; border-radius: 10px;"></video>

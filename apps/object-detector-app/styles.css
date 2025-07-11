@@ -1,0 +1,99 @@
+main-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: #121212;
+    color: white;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    padding: 15px;
+    box-sizing: border-box;
+  }
+  
+  top-bar {
+    font-weight: 700;
+    font-size: 1.4rem;
+    text-align: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #444;
+    user-select: none;
+  }
+  
+  camera-container {
+    margin: 20px auto;
+    position: relative;
+    width: 90vw;
+    max-width: 400px;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.7);
+    background: black;
+  }
+  
+  video {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 10px;
+  }
+  
+  canvas#overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    border-radius: 10px;
+  }
+  
+  controls {
+    margin-top: 10px;
+    text-align: center;
+  }
+  
+  controls button {
+    background-color: #00cc44;
+    border: none;
+    color: white;
+    padding: 12px 22px;
+    margin: 0 10px;
+    font-size: 1rem;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    user-select: none;
+  }
+  
+  controls button:disabled {
+    background-color: #444;
+    cursor: not-allowed;
+  }
+  
+  controls button:hover:not(:disabled) {
+    background-color: #00ee55;
+  }
+  
+  photos-container {
+    margin-top: 15px;
+    text-align: center;
+    color: white;
+  }
+  
+  photos-container img {
+    border: 2px solid #00cc44;
+    border-radius: 5px;
+    transition: transform 0.2s ease;
+  }
+  
+  photos-container img:hover {
+    transform: scale(1.1);
+    border-color: #00ee55;
+    cursor: pointer;
+  }
+  
+  status {
+    margin-top: 15px;
+    font-size: 1rem;
+    text-align: center;
+    min-height: 1.2rem;
+    user-select: none;
+  }
+  

@@ -8,6 +8,11 @@ const FILES_TO_CACHE = [
   '/manifest.json',
   '/logo.png',
   // Cache all app files
+  '/apps/calculator-app/app.js',
+  '/apps/calculator-app/custom.js',
+  '/apps/object-detector-app/app.js',
+  '/apps/object-detector-app/styles.css',
+  '/apps/object-detector-app/icon.png',
   '/apps/perceptra-app/app.js',
   '/apps/perceptra-app/icon.png',
   '/apps/flappy-app/app.js',

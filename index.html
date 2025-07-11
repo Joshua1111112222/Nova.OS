@@ -1,161 +1,211 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <style>body {font-family: sans-serif; margin: 0px;}</style>
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="Nova.OS">
-  <meta name="theme-color" content="#170032">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="apple-touch-icon" href="./images/logo.png">
-  <link rel="manifest" href="./manifest.json">
-  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1.0">
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20,200,0,0" />
-</head>
-<body>
+	<head>
+		<style>body {font-family:sans-serif;margin:0px}</style>
+		<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Nova.OS">
+<meta name="theme-color" content="#170032">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="./images/logo.png">
+<link rel="manifest" href="./manifest.json">
+<meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1.0">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20,200,0,0" />
 
-<script>
-// === Built-in helpers ===
+	</head>
+	<body>
+	<script>
+// minify this code via jscompress.com
 
 function html(e,...t) {
-  e = [...e];
-  let ht = "";
-  e.forEach((val,ind) => {
-    ht += val;
-    if (t[ind]) {
-      ht += t[ind];
-    }
-  })
-  ht = ht.replace(/<([\w-]+)([^>]*)\/>/gi, "<$1$2></$1>");
-  return ht;
+	e = [...e];
+	let ht = "";
+	e.forEach((val,ind) => {
+		ht += val;
+		if (t[ind]) {
+			ht += t[ind];
+		}
+	})
+	ht = ht.replace(/<([\w-]+)([^>]*)\/>/gi, "<$1$2></$1>");
+	return ht;
 }
-
 function _(ht) {
-  let temp_elem = document.createElement("template");
-  temp_elem.innerHTML = ht;
-  document.body.appendChild(temp_elem.content);
-  manage_post_html();
+	let temp_elem = document.createElement("template");
+	temp_elem.innerHTML = ht;
+	document.body.appendChild(temp_elem.content);
+	manage_post_html();
 }
-
 function _component(name,ht, oncreated = null, contained = true) {
-  customElements.define(name, class extends HTMLElement {
-    constructor() { super() }
-    connectedCallback() {
-      if (contained) {
-        let shadow_doc = this.attachShadow({ mode: 'open' });
-        this.shadow = shadow_doc;
-        shadow_doc.innerHTML = ht;
-      } else {
-        this.innerHTML = ht;
-      }
-      if (oncreated) oncreated(this.shadow);
-    }
-  });
-  return name;
+	customElements.define(name, class extends HTMLElement {
+		constructor() {
+			super()
+		}
+		connectedCallback() {
+			if (contained == true) {
+				let shadow_doc = this.attachShadow({ mode: 'open' });
+				this.shadow = shadow_doc
+				shadow_doc.innerHTML = ht;
+			} else {
+				this.innerHTML = ht;
+			}
+
+			if (oncreated != null) {
+				oncreated(this.shadow);
+			}
+
+		}
+	});
+	return name;
+}
+function _create_container(name) {
+	customElements.define(name, class extends HTMLElement {
+		constructor() {
+			super()
+		}
+		connectedCallback() {
+			
+		}
+	});
+}
+function _create_containers(names) {
+	names.forEach((val) => {
+		customElements.define(val, class extends HTMLElement {
+			constructor() {
+				super()
+			}
+			connectedCallback() {
+				
+			}
+		});
+	})
+	
+}
+function manage_post_html() {
+	//
 }
 
 function addCSSFont(url) {
-  let link = document.createElement("link");
-  link.rel = "stylesheet";
-  link.href = url;
-  document.head.appendChild(link);
+	let link = document.createElement("link");
+	link.rel = "stylesheet";
+	link.href = url;
+	document.head.appendChild(link);
 }
-
 function select(item) {
-  return document.querySelector(item);
+	return document.querySelector(item);
 }
-
+function select_all(item) {
+	return document.querySelectorAll(item);
+}
 function style(item) {
-  return document.querySelector(item).style;
+	return document.querySelector(item).style;
 }
 
-function manage_post_html() {}
+function recieve_server_data() {
+	let rv = null;
+	let cookie_data = document.cookie;
+	cookie_data = cookie_data.split(";");
+	cookie_data.forEach((val) => {
+		val = val.split("=");
+		if (val[0] == "OSCRIPT_JS_DATA") {
+			rv = val[1];
+		}
+	})
+	return rv;
+}
+
 
 function addUndefinedElement(name) {
-  if (!customElements.get(name)) {
-    customElements.define(name, class extends HTMLElement {
-      constructor() { super() }
-      connectedCallback() {
-        if (this.hasAttribute("flex")) {
-          this.style.display = "flex";
-        }
-        if (this.hasAttribute("fullscreen")) {
-          this.style.width = "100vw";
-          this.style.height = "100vh";
-          this.style.position = "fixed";
-          this.style.top = "0px";
-          this.style.left = "0px";
-        }
-      }
-    });
-  }
+	if (customElements.get(name) == undefined) {
+		customElements.define(name, class extends HTMLElement {
+			constructor() {
+				super()
+			}
+			connectedCallback() {
+				if (this.hasAttribute("flex")) {
+					this.style.display = "flex";
+				}
+				if (this.hasAttribute("fullscreen")) {
+					this.style.width = "100vw";
+					this.style.height = "100vh";
+					this.style.position = "fixed";
+					this.style.top = "0px";
+					this.style.left = "0px";
+				}
+			}
+		});
+	}
+	
 }
-
 function checkAllElements(elem) {
-  const walker = document.createTreeWalker(elem, NodeFilter.SHOW_ELEMENT);
-  let n;
-  while (n = walker.nextNode()) checkElement(n);
-}
+	const NEW_WALKER = document.createTreeWalker(elem,NodeFilter.SHOW_ELEMENT,(n) => n.nodeType==Node.ELEMENT_NODE);
 
+	let n;
+	while (n = NEW_WALKER.nextNode()) {
+		checkElement(n);
+	}
+}
 function checkElement(elem) {
-  if (elem.nodeType == Node.ELEMENT_NODE) {
-    if (elem.tagName.toLowerCase().includes("-")) {
-      if (!customElements.get(elem.tagName.toLowerCase())) {
-        addUndefinedElement(elem.tagName.toLowerCase());
-      }
-    }
-    if (elem.shadowRoot) {
-      addObserver(elem.shadowRoot);
-      checkAllElements(elem.shadowRoot);
-    }
-  }
-  if (elem.childNodes) {
-    checkAllElements(elem);
-  }
-}
+	if (elem.nodeType == Node.ELEMENT_NODE) {
 
+		if (elem.tagName.toLowerCase().includes("-")) {
+			if (customElements.get(elem.tagName.toLowerCase()) == undefined) {
+				addUndefinedElement(elem.tagName.toLowerCase())
+			}
+		}
+
+		if (elem.shadowRoot) {
+			addObserver(elem.shadowRoot);
+			checkAllElements(elem.shadowRoot);
+		}
+	}
+	if (elem.childNodes) {
+		checkAllElements(elem)
+	}
+}
 function addObserver(observable) {
-  const observer = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      for (const node of mutation.addedNodes) {
-        checkElement(node);
-      }
-    }
-  });
-  observer.observe(observable, {
-    childList: true,
-    attributes: true,
-    subtree: true,
-  });
+	const observer = new MutationObserver((mutations) => {
+		for (const mutation of mutations) {
+			for (const node of mutation.addedNodes) {
+				checkElement(node);
+			}
+		}
+	})
+	observer.observe(observable,{
+		childList:true,
+		attributes:true,
+		subtree:true,
+	})
 }
 
 const OSCRIPT = {
-  experimental: {
-    autoDefine: function() {
-      addObserver(document.documentElement);
-    }
-  }
-};
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('service-worker.js')
-      .then(reg => console.log('✅ Service Worker registered:', reg.scope))
-      .catch(err => console.error('❌ Service Worker registration failed:', err));
-  });
-
-  if (navigator.storage && navigator.storage.persist) {
-    navigator.storage.persist().then(granted => {
-      console.log(granted
-        ? "🔒 Persistent storage granted"
-        : "⚠️ Persistent storage NOT granted");
-    });
-  }
+	experimental: {
+		autoDefine: function() {
+			addObserver(document.documentElement);
+		}
+	}
 }
+
+</script>
+<script>
+  if ('serviceWorker' in navigator) {
+	window.addEventListener('load', () => {
+	  navigator.serviceWorker.register('service-worker.js')
+		.then(reg => console.log('✅ Service Worker registered:', reg.scope))
+		.catch(err => console.error('❌ Service Worker registration failed:', err));
+	});
+
+	if (navigator.storage && navigator.storage.persist) {
+	  navigator.storage.persist().then(granted => {
+		console.log(granted
+		  ? "🔒 Persistent storage granted"
+		  : "⚠️ Persistent storage NOT granted"
+		);
+	  });
+	}
+  }
 </script>
 
-<script type="module" src="./index.js"></script>
-</body>
+	<script src='./index.js' type='module'></script>
+	</body>
 </html>
-</script>

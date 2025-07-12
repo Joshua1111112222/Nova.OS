@@ -1,7 +1,7 @@
 export const app_name = "ai-chat-app";
 
 export const app = _component("ai-chat-app", html`
-<link rel="stylesheet" type="text/css" href="./apps/ai-chat-app/styles.css" />
+  <link rel="stylesheet" type="text/css" href="./apps/ai-chat-app/styles.css" />
 
   <main-area>
     <header-title>AI Chat</header-title>
@@ -23,6 +23,8 @@ function boot_up_app(app) {
   const sendButton = app.querySelector("#sendButton");
   const jarvisOrb = app.querySelector("#jarvis-orb");
 
+  const GEMINI_API_KEY = "AIzaSyBmvvOHdCEkqg8UYVh2tVoe2EFEV5rLYvE"; // Replace with your real Gemini API key
+
   let messages = [
     {
       user: "AI",
@@ -42,7 +44,6 @@ function boot_up_app(app) {
     conversationArea.scrollTop = conversationArea.scrollHeight;
   }
 
-  // Jarvis orb controls
   function startThinking() {
     isThinking = true;
     jarvisOrb.classList.add("thinking");
@@ -56,7 +57,7 @@ function boot_up_app(app) {
   }
 
   messageInput.addEventListener("input", () => {
-    if (isThinking) return; // if AI is thinking, keep thinking state
+    if (isThinking) return;
     jarvisOrb.classList.add("typing");
     jarvisOrb.classList.remove("idle", "thinking");
 
@@ -69,6 +70,72 @@ function boot_up_app(app) {
     }, 1500);
   });
 
+  async function callGeminiAPI(prompt, history) {
+    // Gemini API expects a POST request with { messages: [...] }
+    const messagesForGemini = [
+      {
+        role: "system",
+        content: "You are an AI named Delta, created by Joshua The. Your mission is to follow what the user tells you to your extent and to be helpful and never harmful."
+      },
+      ...history.map(({ user, text }) => ({
+        role: user === "You" ? "user" : "assistant",
+        content: text,
+      })),
+      {
+        role: "user",
+        content: prompt,
+      },
+    ];
+
+    try {
+      const response = await fetch("https://generativeai.googleapis.com/v1beta2/models/chat-bison-001:generateMessage?key=" + GEMINI_API_KEY, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          "messages": messagesForGemini,
+          "temperature": 0.7,
+          "candidateCount": 1,
+        }),
+      });
+
+      const data = await response.json();
+
+      // Extract answer text from Gemini response
+      let answer = data?.candidates?.[0]?.content || "";
+
+      return answer.trim();
+    } catch (err) {
+      console.error("Gemini API error:", err);
+      return "";
+    }
+  }
+
+  async function callBackendFallback(prompt, history) {
+    try {
+      const response = await fetch("https://nova-os-messaging-backend.onrender.com", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt,
+          history: history.map(({ user, text }) => ({
+            role: user === "You" ? "user" : "assistant",
+            content: text,
+          })),
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success && data.answer) {
+        return data.answer;
+      } else {
+        return "Sorry, I couldn't process that.";
+      }
+    } catch (err) {
+      console.error("Backend fallback error:", err);
+      return "Network error or backend unavailable.";
+    }
+  }
+
   async function sendMessage() {
     const text = messageInput.value.trim();
     if (!text) return;
@@ -78,36 +145,25 @@ function boot_up_app(app) {
 
     startThinking();
 
-    try {
-      const response = await fetch("https://nova-os-messaging-backend.onrender.com/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt: text,
-          history: [
-            {
-              role: "system",
-              content: "You are an AI named Delta, created by Joshua The. Your mission is to follow what the user tells you to your extent and to be helpful and never harmful."
-            },
-            ...messages.map(({ user, text }) => ({
-              role: user === "You" ? "user" : "assistant",
-              content: text,
-            })),
-          ],
-        }),
-      });
-      const data = await response.json();
+    // Call Gemini API first
+    let answer = await callGeminiAPI(text, messages);
 
-      if (data.success) {
-        messages.push({ user: "AI", text: data.answer });
-      } else {
-        messages.push({ user: "AI", text: "Sorry, I couldn't process that." });
-      }
-    } catch (err) {
-      messages.push({ user: "AI", text: "Network error or backend unavailable." });
+    // Check for generic/empty answer and fallback if needed
+    if (
+      !answer ||
+      answer.length < 5 ||
+      answer.toLowerCase().includes("i don't know") ||
+      answer.toLowerCase().includes("as an ai") ||
+      answer.toLowerCase().includes("sorry") ||
+      answer.toLowerCase().includes("unable")
+    ) {
+      // fallback to backend scraping search
+      answer = await callBackendFallback(text, messages);
     }
 
+    messages.push({ user: "AI", text: answer });
     renderMessages();
+
     stopThinking();
   }
 
@@ -119,8 +175,6 @@ function boot_up_app(app) {
     }
   });
 
-  // Initialize orb idle animation
   jarvisOrb.classList.add("idle");
-
-  renderMessages(); // Show the initial AI message on load
+  renderMessages();
 }

@@ -1,7 +1,7 @@
 export const app_name = "ai-chat-app";
 
 export const app = _component("ai-chat-app", html`
-  <link rel="stylesheet" type="text/css" href="./apps/chat-ai-app/styles.css" />
+<link rel="stylesheet" type="text/css" href="./apps/ai-chat-app/styles.css" />
 
   <main-area>
     <header-title>AI Chat</header-title>

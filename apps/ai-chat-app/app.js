@@ -1,97 +1,113 @@
-export const app_name = "ai-chat-app";
+export const app_name = "chat-ai-app";
 
-export const app = _component("ai-chat-app", html`
-  <link rel="stylesheet" type="text/css" href="./apps/ai-chat-app/styles.css">
+export const app = _component("chat-ai-app", html`
+  <link rel="stylesheet" type="text/css" href="./apps/chat-ai-app/styles.css" />
 
   <main-area>
-    <header-title>
-      Ready when you are, <span id="userNamePlaceholder"></span>!
-    </header-title>
+    <header-title>AI Chat</header-title>
 
-    <ai-conversation-area id="aiConversationArea"></ai-conversation-area>
+    <conversation-area></conversation-area>
+
+    <div id="jarvis-orb" class="idle"></div>
 
     <input-area>
-      <textarea id="aiPromptInput" placeholder="Ask me anything..." rows="2"></textarea>
-      <button id="askAiButton">Ask</button>
+      <textarea id="messageInput" placeholder="Type a message..." autocomplete="off" rows="1"></textarea>
+      <button id="sendButton">Send</button>
     </input-area>
-
-    <div id="aiProgressBar"></div>
   </main-area>
 `, boot_up_app);
 
 function boot_up_app(app) {
-  const conversationArea = app.querySelector("#aiConversationArea");
-  const aiPromptInput = app.querySelector("#aiPromptInput");
-  const askAiButton = app.querySelector("#askAiButton");
-  const progressBar = app.querySelector("#aiProgressBar");
-  const userNamePlaceholder = app.querySelector("#userNamePlaceholder");
+  const conversationArea = app.querySelector("conversation-area");
+  const messageInput = app.querySelector("#messageInput");
+  const sendButton = app.querySelector("#sendButton");
+  const jarvisOrb = app.querySelector("#jarvis-orb");
 
-  const backendUrl = "https://nova-os-messaging-backend.onrender.com"; // replace this
-  const username = localStorage.getItem("nova-user") || "Friend";
-  userNamePlaceholder.textContent = username;
+  let messages = [];
+  let isThinking = false;
 
-  let conversationHistory = [
-    { role: "system", content: `You are a helpful AI assistant talking to ${username}.` }
-  ];
-
-  async function askAI() {
-    const prompt = aiPromptInput.value.trim();
-    if (!prompt) return;
-
-    // Add user message
-    conversationHistory.push({ role: "user", content: prompt });
-
-    appendMessage(username, prompt);
-
-    aiPromptInput.value = "";
-    askAiButton.disabled = true;
-    progressBar.style.width = "30%";
-
-    appendMessage("AI", "Thinking...");
-
-    try {
-      const response = await fetch(`${backendUrl}/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ history: conversationHistory })
-      });
-
-      progressBar.style.width = "70%";
-
-      const data = await response.json();
-
-      // Remove placeholder "Thinking..."
-      conversationArea.removeChild(conversationArea.lastChild);
-
-      if (data.success) {
-        conversationHistory.push({ role: "assistant", content: data.answer });
-        appendMessage("AI", data.answer);
-      } else {
-        appendMessage("AI", "Error: " + (data.error || "Unknown error"));
-      }
-
-    } catch {
-      appendMessage("AI", "Network error.");
-    } finally {
-      askAiButton.disabled = false;
-      progressBar.style.width = "100%";
-      setTimeout(() => progressBar.style.width = "0%", 500);
-    }
-  }
-
-  function appendMessage(sender, text) {
-    const bubble = document.createElement("div");
-    bubble.className = sender === username ? "ai-message user" : "ai-message ai";
-    bubble.textContent = `${sender}: ${text}`;
-    conversationArea.appendChild(bubble);
+  function renderMessages() {
+    conversationArea.innerHTML = "";
+    messages.forEach(({ user, text }) => {
+      const bubble = document.createElement("div");
+      bubble.className = user === "You" ? "message sent" : "message received";
+      bubble.textContent = `${user}: ${text}`;
+      conversationArea.appendChild(bubble);
+    });
     conversationArea.scrollTop = conversationArea.scrollHeight;
   }
 
-  askAiButton.addEventListener("click", askAI);
-  aiPromptInput.addEventListener("keydown", (e) => {
+  // Jarvis orb controls
+  function startThinking() {
+    isThinking = true;
+    jarvisOrb.classList.add("thinking");
+    jarvisOrb.classList.remove("idle", "typing");
+  }
+
+  function stopThinking() {
+    isThinking = false;
+    jarvisOrb.classList.remove("thinking", "typing");
+    jarvisOrb.classList.add("idle");
+  }
+
+  messageInput.addEventListener("input", () => {
+    if (isThinking) return; // if AI is thinking, keep thinking state
+    jarvisOrb.classList.add("typing");
+    jarvisOrb.classList.remove("idle", "thinking");
+
+    clearTimeout(jarvisOrb.typingTimeout);
+    jarvisOrb.typingTimeout = setTimeout(() => {
+      if (!isThinking) {
+        jarvisOrb.classList.remove("typing");
+        jarvisOrb.classList.add("idle");
+      }
+    }, 1500);
+  });
+
+  async function sendMessage() {
+    const text = messageInput.value.trim();
+    if (!text) return;
+    messageInput.value = "";
+    messages.push({ user: "You", text });
+    renderMessages();
+
+    startThinking();
+
+    try {
+      const response = await fetch("https://nova-os-messaging-backend.onrender.com", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: text,
+          history: messages.map(({ user, text }) => ({
+            role: user === "You" ? "user" : "assistant",
+            content: text,
+          })),
+        }),
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        messages.push({ user: "AI", text: data.answer });
+      } else {
+        messages.push({ user: "AI", text: "Sorry, I couldn't process that." });
+      }
+    } catch (err) {
+      messages.push({ user: "AI", text: "Network error or backend unavailable." });
+    }
+
+    renderMessages();
+    stopThinking();
+  }
+
+  sendButton.addEventListener("click", sendMessage);
+  messageInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      askAI();
+      sendMessage();
     }
   });
+
+  // Initialize orb idle animation
+  jarvisOrb.classList.add("idle");
 }

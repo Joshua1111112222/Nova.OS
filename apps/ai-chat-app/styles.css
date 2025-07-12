@@ -316,4 +316,85 @@
     gap: 8px;
     justify-content: flex-end;
   }
+
+  /* Jarvis Orb Container */
+.jarvis-orb-container {
+    position: fixed;
+    bottom: 40px;
+    right: 40px;
+    width: 80px;
+    height: 80px;
+    background: #000; /* pure black background */
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    box-shadow: 0 0 15px rgba(94, 156, 255, 0.5);
+    z-index: 1000;
+  }
+  
+  /* Jarvis Orb - blue glowing circle */
+  .jarvis-orb {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: #0055ff; /* bright blue */
+    box-shadow:
+      0 0 8px #0055ff,
+      0 0 20px #0055ff,
+      0 0 30px #1e90ff,
+      0 0 40px #1e90ff,
+      inset 0 0 10px #3399ff;
+    animation: pulseGlow 3s ease-in-out infinite;
+  }
+  
+  /* Pulsing glow animation */
+  @keyframes pulseGlow {
+    0%, 100% {
+      box-shadow:
+        0 0 8px #0055ff,
+        0 0 20px #0055ff,
+        0 0 30px #1e90ff,
+        0 0 40px #1e90ff,
+        inset 0 0 10px #3399ff;
+      transform: scale(1);
+    }
+    50% {
+      box-shadow:
+        0 0 15px #3399ff,
+        0 0 30px #3399ff,
+        0 0 45px #66b3ff,
+        0 0 55px #66b3ff,
+        inset 0 0 15px #66b3ff;
+      transform: scale(1.1);
+    }
+  }
+  
+  /* Orb pulsing faster on typing/thinking */
+  .jarvis-orb.typing {
+    animation: fastPulseGlow 1s ease-in-out infinite;
+  }
+  
+  @keyframes fastPulseGlow {
+    0%, 100% {
+      box-shadow:
+        0 0 10px #3399ff,
+        0 0 25px #3399ff,
+        0 0 40px #66b3ff,
+        0 0 50px #66b3ff,
+        inset 0 0 12px #66b3ff;
+      transform: scale(1);
+    }
+    50% {
+      box-shadow:
+        0 0 20px #66b3ff,
+        0 0 40px #66b3ff,
+        0 0 60px #99ccff,
+        0 0 70px #99ccff,
+        inset 0 0 20px #99ccff;
+      transform: scale(1.15);
+    }
+  }
+  
   

@@ -8,7 +8,7 @@ export const app = _component("ai-chat-app", html`
 
     <conversation-area></conversation-area>
 
-    <div id="jarvis-orb" class="idle"></div>
+    <div id="jarvis-orb" class="jarvis-orb idle"></div>
 
     <input-area>
       <textarea id="messageInput" placeholder="Type a message..." autocomplete="off" rows="1"></textarea>
@@ -25,12 +25,9 @@ function boot_up_app(app) {
 
   const GEMINI_API_KEY = "AIzaSyBmvvOHdCEkqg8UYVh2tVoe2EFEV5rLYvE"; // Replace with your real Gemini API key
 
-  let messages = [
-    {
-      user: "AI",
-      text: "You are an AI named Delta, created by Joshua The. Your mission is to follow what the user tells you to your extent and to be helpful and never harmful."
-    }
-  ];
+  // Messages shown to user (do NOT include system prompt here)
+  let messages = [];
+
   let isThinking = false;
 
   function renderMessages() {
@@ -71,11 +68,11 @@ function boot_up_app(app) {
   });
 
   async function callGeminiAPI(prompt, history) {
-    // Gemini API expects a POST request with { messages: [...] }
     const messagesForGemini = [
       {
         role: "system",
-        content: "You are an AI named Delta, created by Joshua The. Your mission is to follow what the user tells you to your extent and to be helpful and never harmful."
+        content:
+          "You are an AI named Delta, created by Joshua The. Your mission is to follow what the user tells you to your extent and to be helpful and never harmful.",
       },
       ...history.map(({ user, text }) => ({
         role: user === "You" ? "user" : "assistant",
@@ -88,19 +85,22 @@ function boot_up_app(app) {
     ];
 
     try {
-      const response = await fetch("https://generativeai.googleapis.com/v1beta2/models/chat-bison-001:generateMessage?key=" + GEMINI_API_KEY, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          "messages": messagesForGemini,
-          "temperature": 0.7,
-          "candidateCount": 1,
-        }),
-      });
+      const response = await fetch(
+        "https://generativeai.googleapis.com/v1beta2/models/chat-bison-001:generateMessage?key=" +
+          GEMINI_API_KEY,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: messagesForGemini,
+            temperature: 0.7,
+            candidateCount: 1,
+          }),
+        }
+      );
 
       const data = await response.json();
 
-      // Extract answer text from Gemini response
       let answer = data?.candidates?.[0]?.content || "";
 
       return answer.trim();
@@ -112,17 +112,20 @@ function boot_up_app(app) {
 
   async function callBackendFallback(prompt, history) {
     try {
-      const response = await fetch("https://nova-os-messaging-backend.onrender.com", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt,
-          history: history.map(({ user, text }) => ({
-            role: user === "You" ? "user" : "assistant",
-            content: text,
-          })),
-        }),
-      });
+      const response = await fetch(
+        "https://nova-os-messaging-backend.onrender.com/chat",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prompt,
+            history: history.map(({ user, text }) => ({
+              role: user === "You" ? "user" : "assistant",
+              content: text,
+            })),
+          }),
+        }
+      );
 
       const data = await response.json();
       if (data.success && data.answer) {
@@ -145,10 +148,8 @@ function boot_up_app(app) {
 
     startThinking();
 
-    // Call Gemini API first
     let answer = await callGeminiAPI(text, messages);
 
-    // Check for generic/empty answer and fallback if needed
     if (
       !answer ||
       answer.length < 5 ||
@@ -157,7 +158,6 @@ function boot_up_app(app) {
       answer.toLowerCase().includes("sorry") ||
       answer.toLowerCase().includes("unable")
     ) {
-      // fallback to backend scraping search
       answer = await callBackendFallback(text, messages);
     }
 
@@ -176,5 +176,14 @@ function boot_up_app(app) {
   });
 
   jarvisOrb.classList.add("idle");
+
+  // Initial render - empty chat (no system message shown)
   renderMessages();
+
+  // iOS Keyboard fix: scroll input into view on focus
+  messageInput.addEventListener("focus", () => {
+    setTimeout(() => {
+      messageInput.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }, 300);
+  });
 }

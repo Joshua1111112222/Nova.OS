@@ -11,86 +11,10 @@
     height: 100%;
     background-color: #121212;
     color: #eee;
-  }
-  
-  .login-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    background: #1f1f1f;
-  }
-  
-  .login-box {
-    background: #222;
-    padding: 2rem 2.5rem;
-    border-radius: 12px;
-    box-shadow: 0 0 15px rgba(255 255 255 / 0.1);
-    width: 320px;
-    text-align: center;
-  }
-  
-  .login-box h2 {
-    margin-bottom: 1.2rem;
-    font-weight: 700;
-    font-size: 1.6rem;
-    color: #f0f0f0;
-  }
-  
-  .login-box label {
-    display: block;
-    margin: 0.75rem 0 0.25rem;
-    font-weight: 600;
-    font-size: 0.9rem;
-    color: #aaa;
-  }
-  
-  .login-box input[type="text"],
-  .login-box input[type="password"] {
-    width: 100%;
-    padding: 0.6rem 0.8rem;
-    font-size: 1rem;
-    border-radius: 6px;
-    border: 1px solid #444;
-    background: #181818;
-    color: #eee;
-    transition: border-color 0.2s ease;
-  }
-  
-  .login-box input[type="text"]:focus,
-  .login-box input[type="password"]:focus {
-    outline: none;
-    border-color: #5e9cff;
-  }
-  
-  .login-box #submitBtn {
-    margin-top: 1.5rem;
-    width: 100%;
-    padding: 0.7rem;
-    font-weight: 700;
-    font-size: 1rem;
-    border: none;
-    border-radius: 6px;
-    background-color: #5e9cff;
-    color: #fff;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-  }
-  
-  .login-box #submitBtn:hover {
-    background-color: #2e72f5;
-  }
-  
-  .login-toggle {
-    margin-top: 1rem;
-    font-size: 0.9rem;
-    color: #bbb;
-  }
-  
-  .login-toggle .toggle-link {
-    color: #5e9cff;
-    cursor: pointer;
-    font-weight: 600;
+    -webkit-font-smoothing: antialiased;
+    -webkit-text-size-adjust: 100%;
+    /* iOS keyboard safe area */
+    padding-bottom: env(safe-area-inset-bottom);
   }
   
   main-area {
@@ -112,22 +36,6 @@
     font-size: 1.4rem;
     color: #5e9cff;
     box-shadow: 0 2px 4px rgba(0,0,0,0.6);
-  }
-  
-  header-title button {
-    background: transparent;
-    border: none;
-    color: #5e9cff;
-    font-weight: 600;
-    cursor: pointer;
-    padding: 0.3rem 0.6rem;
-    border-radius: 5px;
-    transition: background-color 0.2s ease;
-  }
-  
-  header-title button:hover {
-    background-color: #3a6eee;
-    color: white;
   }
   
   conversation-area {
@@ -175,33 +83,6 @@
     border-bottom-left-radius: 4px;
   }
   
-  .message-text {
-    white-space: pre-wrap;
-  }
-  
-  .message-buttons {
-    display: flex;
-    gap: 6px;
-    margin-top: 6px;
-    justify-content: flex-end;
-  }
-  
-  .msg-btn {
-    background: transparent;
-    border: 1px solid #5e9cff;
-    border-radius: 4px;
-    color: #5e9cff;
-    font-size: 0.75rem;
-    padding: 3px 7px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-  
-  .msg-btn:hover {
-    background-color: #5e9cff;
-    color: white;
-  }
-  
   input-area {
     display: flex;
     padding: 0.75rem 1rem;
@@ -209,6 +90,8 @@
     gap: 10px;
     align-items: center;
     border-top: 1px solid #333;
+    /* iOS safe area padding */
+    padding-bottom: calc(env(safe-area-inset-bottom) + 10px);
   }
   
   #messageInput {
@@ -247,99 +130,15 @@
     background-color: #2e72f5;
   }
   
-  #progressBar {
-    height: 3px;
-    background-color: #5e9cff;
-    width: 0;
-    transition: width 0.4s ease;
-  }
-  
-  .scroll-to-bottom-btn {
-    position: fixed;
-    bottom: 80px;
-    right: 30px;
-    background-color: #5e9cff;
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 38px;
-    height: 38px;
-    font-size: 1.2rem;
-    cursor: pointer;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 6px rgba(94,156,255,0.8);
-    z-index: 100;
-  }
-  
-  .scroll-to-bottom-btn:hover {
-    background-color: #2e72f5;
-  }
-  
-  /* Admin panel modal */
-  #adminPanel {
-    background-color: #222;
-    border: 1px solid #444;
-    box-shadow: 0 0 20px rgba(0,0,0,0.8);
-  }
-  
-  #adminPanel h3, #adminPanel h4 {
-    margin-bottom: 0.8rem;
-  }
-  
-  #adminPanel ul li {
-    padding: 0.6rem;
-    border-bottom: 1px solid #444;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  /* Editable message textarea */
-  .edit-input {
-    width: 100%;
-    font-family: inherit;
-    font-size: 0.95rem;
-    padding: 6px 10px;
-    margin-top: 6px;
-    border-radius: 8px;
-    border: 1px solid #5e9cff;
-    background-color: #181818;
-    color: white;
-    resize: vertical;
-  }
-  
-  .edit-controls {
-    margin-top: 4px;
-    display: flex;
-    gap: 8px;
-    justify-content: flex-end;
-  }
-
   /* Jarvis Orb Container */
-.jarvis-orb-container {
+  #jarvis-orb {
     position: fixed;
     bottom: 40px;
     right: 40px;
-    width: 80px;
-    height: 80px;
-    background: #000; /* pure black background */
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    box-shadow: 0 0 15px rgba(94, 156, 255, 0.5);
-    z-index: 1000;
-  }
-  
-  /* Jarvis Orb - blue glowing circle */
-  .jarvis-orb {
     width: 60px;
     height: 60px;
     border-radius: 50%;
-    background: #0055ff; /* bright blue */
+    background: #0055ff;
     box-shadow:
       0 0 8px #0055ff,
       0 0 20px #0055ff,
@@ -347,9 +146,35 @@
       0 0 40px #1e90ff,
       inset 0 0 10px #3399ff;
     animation: pulseGlow 3s ease-in-out infinite;
+    cursor: pointer;
+    z-index: 1000;
   }
   
-  /* Pulsing glow animation */
+  /* Orb animation states */
+  #jarvis-orb.idle {
+    animation: pulseGlow 3s ease-in-out infinite;
+  }
+  
+  #jarvis-orb.typing {
+    animation: fastPulseGlow 1s ease-in-out infinite;
+    box-shadow:
+      0 0 10px #3399ff,
+      0 0 25px #3399ff,
+      0 0 40px #66b3ff,
+      0 0 50px #66b3ff,
+      inset 0 0 12px #66b3ff;
+  }
+  
+  #jarvis-orb.thinking {
+    animation: fastPulseGlow 1s ease-in-out infinite;
+    box-shadow:
+      0 0 15px #66b3ff,
+      0 0 35px #66b3ff,
+      0 0 50px #99ccff,
+      0 0 60px #99ccff,
+      inset 0 0 15px #99ccff;
+  }
+  
   @keyframes pulseGlow {
     0%, 100% {
       box-shadow:
@@ -369,11 +194,6 @@
         inset 0 0 15px #66b3ff;
       transform: scale(1.1);
     }
-  }
-  
-  /* Orb pulsing faster on typing/thinking */
-  .jarvis-orb.typing {
-    animation: fastPulseGlow 1s ease-in-out infinite;
   }
   
   @keyframes fastPulseGlow {
@@ -396,5 +216,4 @@
       transform: scale(1.15);
     }
   }
-  
   

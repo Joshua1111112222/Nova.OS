@@ -1,6 +1,6 @@
-export const app_name = "chat-ai-app";
+export const app_name = "ai-chat-app";
 
-export const app = _component("chat-ai-app", html`
+export const app = _component("ai-chat-app", html`
   <link rel="stylesheet" type="text/css" href="./apps/chat-ai-app/styles.css" />
 
   <main-area>
@@ -23,7 +23,12 @@ function boot_up_app(app) {
   const sendButton = app.querySelector("#sendButton");
   const jarvisOrb = app.querySelector("#jarvis-orb");
 
-  let messages = [];
+  let messages = [
+    {
+      user: "AI",
+      text: "You are an AI named Delta, created by Joshua The. Your mission is to follow what the user tells you to your extent and to be helpful and never harmful."
+    }
+  ];
   let isThinking = false;
 
   function renderMessages() {
@@ -74,15 +79,21 @@ function boot_up_app(app) {
     startThinking();
 
     try {
-      const response = await fetch("https://nova-os-messaging-backend.onrender.com", {
+      const response = await fetch("https://nova-os-messaging-backend.onrender.com/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt: text,
-          history: messages.map(({ user, text }) => ({
-            role: user === "You" ? "user" : "assistant",
-            content: text,
-          })),
+          history: [
+            {
+              role: "system",
+              content: "You are an AI named Delta, created by Joshua The. Your mission is to follow what the user tells you to your extent and to be helpful and never harmful."
+            },
+            ...messages.map(({ user, text }) => ({
+              role: user === "You" ? "user" : "assistant",
+              content: text,
+            })),
+          ],
         }),
       });
       const data = await response.json();
@@ -110,4 +121,6 @@ function boot_up_app(app) {
 
   // Initialize orb idle animation
   jarvisOrb.classList.add("idle");
+
+  renderMessages(); // Show the initial AI message on load
 }

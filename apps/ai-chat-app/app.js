@@ -1,6 +1,6 @@
-export const app_name = "chat-app";
+export const app_name = "ai-chat-app";
 
-export const app = _component("chat-app", html`
+export const app = _component("ai-chat-app", html`
   <style>
     /* Your entire styles.css inlined for simplicity */
     :host {

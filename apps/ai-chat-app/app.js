@@ -11,7 +11,6 @@ export const app = _component("ai-chat-app", html`
     <div id="jarvis-orb" class="idle"></div>
     <div id="rate-monitor">Your rates are being monitored</div>
 
-
     <input-area>
       <button id="searchButton" title="Search">&#128269;</button>
       <textarea id="messageInput" placeholder="Type a message..." autocomplete="off" rows="1"></textarea>
@@ -26,6 +25,7 @@ function boot_up_app(app) {
   const sendButton = app.querySelector("#sendButton");
   const searchButton = app.querySelector("#searchButton");
   const jarvisOrb = app.querySelector("#jarvis-orb");
+  const rateMonitor = app.querySelector("#rate-monitor");
 
   const GEMINI_API_KEY = "AIzaSyBmvvOHdCEkqg8UYVh2tVoe2EFEV5rLYvE";
   const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
@@ -41,10 +41,19 @@ function boot_up_app(app) {
   const MESSAGE_LIMIT = 10;
   let messageCount = 0;
 
+  // subtle style for rate monitor
+  rateMonitor.style.position = "fixed";
+  rateMonitor.style.top = "10px";
+  rateMonitor.style.right = "10px";
+  rateMonitor.style.fontSize = "12px";
+  rateMonitor.style.color = "#888";
+  rateMonitor.style.userSelect = "none";
+  rateMonitor.style.opacity = "0.6";
+
   function renderMessages() {
     conversationArea.innerHTML = "";
     messages.forEach(({ user, text }, index) => {
-      if (index === 0) return; // Hide system
+      if (index === 0) return; // hide system prompt in UI
       const bubble = document.createElement("div");
       bubble.className = user === "You" ? "message sent" : "message received";
       bubble.textContent = `${user}: ${text}`;
@@ -79,6 +88,7 @@ function boot_up_app(app) {
   });
 
   async function callGeminiAPI(prompt) {
+    // build history in Gemini expected format
     const history = messages.map(m => ({
       role: m.user === "You" ? "user" : "model",
       parts: [{ text: m.text }]
@@ -180,9 +190,10 @@ function boot_up_app(app) {
 
     const text = messageInput.value.trim();
     if (!text) return;
+
     startThinking();
 
-    // 1️⃣ Get search keywords
+    // 1️⃣ Get search keywords from Gemini AI
     const searchPrompt = `Based on the user's question: "${text}", what keywords should I search online to get the best answer? Reply with only the keywords, nothing else.`;
     let keywords = await callGeminiAPI(searchPrompt);
     if (!keywords) {
@@ -196,31 +207,50 @@ function boot_up_app(app) {
     }
 
     // 2️⃣ Search backend
-    const searchResp = await fetch('https://nova-os-messaging-backend2.onrender.com/duck-search', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: keywords })
-    });
-    const searchData = await searchResp.json();
-    const webResults = searchData.results.join("\n");
-
-    // 3️⃣ Final answer with results
-    const finalPrompt = `User question: "${text}"\n\nWeb search results:\n${webResults}\n\nPlease provide a clear, helpful answer using this information.`;
-    let finalAnswer = await callGeminiAPI(finalPrompt);
-
-    if (!finalAnswer) {
-      stopThinking();
-      messages.push({
-        user: "AI",
-        text: "Sorry, Delta is overloaded or you have reached your limit. Please try again later."
+    try {
+      const searchResp = await fetch('https://nova-os-messaging-backend2.onrender.com/duck-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: keywords })
       });
-      renderMessages();
-      return;
-    }
+      const searchData = await searchResp.json();
 
-    messages.push({ user: "You", text });
-    messages.push({ user: "AI", text: finalAnswer });
-    renderMessages();
+      if (!searchData.success) {
+        stopThinking();
+        messages.push({
+          user: "AI",
+          text: "Sorry, I couldn't find any results for your query."
+        });
+        renderMessages();
+        return;
+      }
+
+      // searchData.results is a string, not array
+      const webResults = searchData.results;
+
+      // 3️⃣ Final answer with results
+      const finalPrompt = `User question: "${text}"\n\nWeb search results:\n${webResults}\n\nPlease provide a clear, helpful answer using this information.`;
+      let finalAnswer = await callGeminiAPI(finalPrompt);
+
+      if (!finalAnswer) {
+        stopThinking();
+        messages.push({
+          user: "AI",
+          text: "Sorry, Delta is overloaded or you have reached your limit. Please try again later."
+        });
+        renderMessages();
+        return;
+      }
+
+      messages.push({ user: "You", text }); // Add user message only once here
+      messages.push({ user: "AI", text: finalAnswer });
+      renderMessages();
+
+    } catch (err) {
+      console.error("Search error:", err);
+      messages.push({ user: "AI", text: "Search failed. Please try again later." });
+      renderMessages();
+    }
 
     stopThinking();
     messageCount++;

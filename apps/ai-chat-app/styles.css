@@ -132,10 +132,10 @@
   
   /* Jarvis Orb Container */
   #jarvis-orb {
-    position: fixed; /* stays on screen */
-    bottom: 40px;    /* distance from bottom */
-    left: 50%;       /* center horizontally */
-    transform: translateX(-50%); /* perfectly center */
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     width: 60px;
     height: 60px;
     border-radius: 50%;
@@ -147,8 +147,9 @@
       0 0 40px #1e90ff,
       inset 0 0 10px #3399ff;
     animation: pulseGlow 3s ease-in-out infinite;
-    z-index: 1000; /* keep on top */
+    z-index: 1000;
   }
+  
   
   
   /* Orb animation states */

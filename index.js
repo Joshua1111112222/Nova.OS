@@ -99,8 +99,10 @@ function loadHome() {
 		display: flex !important;
 		flex-direction: column !important;
 		padding: 10px !important;
-		margin-top: 20px !important; /* Move the top row down slightly */
+		margin-top: 20px !important;
 		box-sizing: border-box !important;
+		position: relative !important;
+		z-index: 1 !important;
 	  }
 	  .app-row {
 		width: 100% !important;
@@ -109,6 +111,10 @@ function loadHome() {
 		gap: 10px !important;
 		margin-bottom: 10px !important;
 		box-sizing: border-box !important;
+		position: relative !important;
+	  }
+	  .app-row:first-child {
+		padding-top: 10px !important;
 	  }
 	  .app-icon {
 		aspect-ratio: 1/1 !important;
@@ -117,11 +123,15 @@ function loadHome() {
 		justify-content: center !important;
 		width: 100% !important;
 		box-sizing: border-box !important;
-		cursor: pointer !important; /* Ensure apps are clickable */
+		cursor: pointer !important;
+		position: relative !important;
+		z-index: 10 !important;
+		pointer-events: auto !important;
 	  }
 	  .app-spacer {
 		visibility: hidden !important;
 		aspect-ratio: 1/1 !important;
+		pointer-events: none !important;
 	  }
 	`;
 	document.head.appendChild(style);
@@ -155,16 +165,31 @@ function loadHome() {
 		app.style.gridColumn = 'auto';
 		app.style.width = '100%';
 		app.style.boxSizing = 'border-box';
+		app.style.position = 'relative';
+		app.style.zIndex = '10';
+		app.style.pointerEvents = 'auto';
   
+		// Remove any existing event listeners first
+		const newApp = app.cloneNode(true);
+		
 		// Reattach event listeners to ensure apps are clickable
-		const appName = app.getAttribute('app-name');
+		const appName = newApp.getAttribute('app-name');
 		if (appName) {
-		  app.addEventListener('click', () => {
-			app_handler.openApp(appName); // Ensure the app opens correctly
+		  // Add multiple event types for better compatibility
+		  newApp.addEventListener('click', (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			app_handler.openApp(appName);
+		  });
+		  
+		  newApp.addEventListener('touchstart', (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			app_handler.openApp(appName);
 		  });
 		}
   
-		row.appendChild(app);
+		row.appendChild(newApp);
 	  });
   
 	  // Fill remaining slots with spacers to maintain grid alignment
@@ -177,4 +202,22 @@ function loadHome() {
   
 	  container.appendChild(row);
 	}
+  
+	// Debug helper - remove this after testing
+	setTimeout(() => {
+	  const topLeftApp = document.querySelector('.app-row:first-child .app-icon:first-child');
+	  if (topLeftApp) {
+		console.log('Top left app found:', topLeftApp.getAttribute('app-name'));
+		
+		// Check what element is actually at that position
+		const rect = topLeftApp.getBoundingClientRect();
+		const elementAtPosition = document.elementFromPoint(rect.left + 10, rect.top + 10);
+		
+		if (elementAtPosition !== topLeftApp) {
+		  console.log('Something is covering the top-left app:', elementAtPosition);
+		} else {
+		  console.log('Top-left app is clickable!');
+		}
+	  }
+	}, 100);
   }

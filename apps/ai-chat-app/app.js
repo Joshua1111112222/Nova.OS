@@ -37,7 +37,7 @@ function boot_up_app(app) {
   function renderMessages() {
     conversationArea.innerHTML = "";
     messages.forEach(({ user, text }, index) => {
-      if (index === 0 && text.includes("Your mission")) return; // hide first system message
+        if (index === 0) return; // Always skip the first message in memory
       const bubble = document.createElement("div");
       bubble.className = user === "You" ? "message sent" : "message received";
       bubble.textContent = `${user}: ${text}`;

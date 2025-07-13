@@ -87,42 +87,57 @@ function loadHome() {
 	  style("loading-bar").display = "none";
 	}, 1000);
   }
-
-function wrapAppsInRows(containerSelector, appsPerRow = 5) {
+  function wrapAppsInRows(containerSelector, appsPerRow = 5) {
 	const container = document.querySelector(containerSelector);
-	if (!container) return;
+	if (!container) {
+	  console.error("Container not found:", containerSelector);
+	  return;
+	}
   
-	// Get all app elements (direct children only)
-	const apps = Array.from(container.children).filter(child => 
-	  child.classList.contains('app-icon') || child.hasAttribute('app-name')
-	);
+	// Get ALL direct children (less strict filtering)
+	const apps = Array.from(container.children);
+	console.log("Found apps:", apps.length, apps);
   
-	// Clear container
-	container.innerHTML = "";
+	if (apps.length === 0) {
+	  console.warn("No apps found to arrange");
+	  return;
+	}
   
-	// Calculate width accounting for gaps (10px between items)
+	// Calculate dimensions
 	const gapSize = 10;
 	const appWidth = `calc(${100 / appsPerRow}% - ${gapSize * (appsPerRow - 1) / appsPerRow}px)`;
+  
+	// Create document fragment for better performance
+	const fragment = document.createDocumentFragment();
   
 	// Create rows
 	for (let i = 0; i < apps.length; i += appsPerRow) {
 	  const row = document.createElement("div");
 	  row.className = "app-row";
-	  row.style.display = "flex";
-	  row.style.flexWrap = "wrap";
-	  row.style.gap = `${gapSize}px`;
-	  row.style.marginBottom = `${gapSize}px`;
-	  row.style.width = "100%";
+	  Object.assign(row.style, {
+		display: "flex",
+		gap: `${gapSize}px`,
+		marginBottom: `${gapSize}px`,
+		width: "100%",
+		justifyContent: "flex-start" // Align items to the start
+	  });
   
 	  // Add apps to this row
 	  const rowApps = apps.slice(i, i + appsPerRow);
 	  rowApps.forEach(app => {
-		app.style.flex = `0 0 ${appWidth}`;
-		app.style.maxWidth = appWidth;
-		app.style.minWidth = "0"; // Prevent flex items from overflowing
+		Object.assign(app.style, {
+		  flex: `0 0 ${appWidth}`,
+		  maxWidth: appWidth,
+		  minWidth: "0", // Prevent flex items from overflowing
+		  display: "flex" // Ensure app contents are properly contained
+		});
 		row.appendChild(app);
 	  });
   
-	  container.appendChild(row);
+	  fragment.appendChild(row);
 	}
+  
+	// Replace container contents in one operation
+	container.innerHTML = "";
+	container.appendChild(fragment);
   }

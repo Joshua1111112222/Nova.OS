@@ -72,6 +72,26 @@ function boot_up_app(app) {
     }, 1500);
   });
 
+  async function fetchScrape(url) {
+    try {
+      const resp = await fetch('https://nova-os-messaging-backend2.onrender.com/apify-scrape', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const data = await resp.json();
+      if (data.success) {
+        // Return the scraped text or structured data you want
+        return data.results.map(item => item.text || item.content).join('\n');
+      }
+      return "Sorry, couldn't scrape the page.";
+    } catch (e) {
+      console.error('Scraping failed:', e);
+      return "Error scraping page.";
+    }
+  }
+  
+
   async function callGeminiAPI(prompt) {
     const history = messages.map(m => ({
       role: m.user === "You" ? "user" : "model",

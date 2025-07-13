@@ -71,7 +71,7 @@ function boot_up_app(app) {
   const userList = app.querySelector("#userList");
   const deleteAllMessagesBtn = app.querySelector("#deleteAllMessagesBtn");
 
-  const backendUrl = "https://nova-os-messaging-backend.onrender.com";
+  const backendUrl = "https://nova-os-messaging-backend2.onrender.com";
 
   let isLogin = true;
   let user = null;

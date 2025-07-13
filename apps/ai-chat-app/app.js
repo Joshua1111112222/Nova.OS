@@ -29,14 +29,15 @@ function boot_up_app(app) {
   let messages = [
     {
       user: "AI",
-      text:""
+      text:"You are an AI named Delta, created by Joshua The. Your mission is to follow what the user tells you to your extent and to be helpful and never harmful."
     }
   ];
   let isThinking = false;
 
   function renderMessages() {
     conversationArea.innerHTML = "";
-    messages.forEach(({ user, text }) => {
+    messages.forEach(({ user, text }, index) => {
+      if (index === 0 && text.includes("Your mission")) return; // hide first system message
       const bubble = document.createElement("div");
       bubble.className = user === "You" ? "message sent" : "message received";
       bubble.textContent = `${user}: ${text}`;
@@ -44,6 +45,7 @@ function boot_up_app(app) {
     });
     conversationArea.scrollTop = conversationArea.scrollHeight;
   }
+  
 
   function startThinking() {
     isThinking = true;
@@ -105,28 +107,49 @@ function boot_up_app(app) {
     messageInput.value = "";
     messages.push({ user: "You", text });
     renderMessages();
-
+  
     startThinking();
-
+  
     let answer = await callGeminiAPI(text);
-
-    if (!answer || answer.length < 5) {
-      answer = "Sorry, I couldn't process that.";
+  
+    const lower = answer.toLowerCase();
+    if (
+      !answer ||
+      answer.length < 5 ||
+      lower.includes("i don't know") ||
+      lower.includes("sorry") ||
+      lower.includes("as an ai") ||
+      lower.includes("unable")
+    ) {
+      try {
+        const resp = await fetch("https://nova-os-messaging-backend.onrender.com/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prompt: text,
+            history: messages
+              .filter(m => m.user !== "System") // ignore system message in backend history
+              .map(m => ({
+                role: m.user === "You" ? "user" : "assistant",
+                content: m.text
+              }))
+          }),
+        });
+        const data = await resp.json();
+        if (data.success && data.answer) {
+          answer = data.answer;
+        }
+      } catch (err) {
+        console.error("Backend fallback error:", err);
+      }
     }
-
+  
     messages.push({ user: "AI", text: answer });
     renderMessages();
-
+  
     stopThinking();
   }
-
-  sendButton.addEventListener("click", sendMessage);
-  messageInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  });
+  
 
   jarvisOrb.classList.add("idle");
   renderMessages();

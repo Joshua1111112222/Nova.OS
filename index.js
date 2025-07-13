@@ -169,77 +169,85 @@ function loadHome() {
   }
   
   // Alternative version with more explicit grid control
-  function wrapAppsInRowsStrict(containerSelector, appsPerRow = 5) {
+  function wrapAppsInRows(containerSelector, appsPerRow = 5) {
 	const container = document.querySelector(containerSelector);
 	if (!container) return;
-	
-	// Remove existing style if it exists
-	const existingStyle = document.querySelector('#app-grid-style');
-	if (existingStyle) {
-	  existingStyle.remove();
-	}
-	
-	// Add new styles
+  
+	// Add CSS styles dynamically with !important to override existing styles
 	const style = document.createElement('style');
-	style.id = 'app-grid-style';
 	style.textContent = `
-	  ${containerSelector} {
+	  app-main {
+		width: 100% !important;
 		display: flex !important;
 		flex-direction: column !important;
-		width: 100% !important;
 		padding: 10px !important;
+		margin-top: 20px !important; /* Move the top row down slightly */
 		box-sizing: border-box !important;
 	  }
-	  
-	  ${containerSelector} .app-row {
+	  .app-row {
+		width: 100% !important;
 		display: grid !important;
-		grid-template-columns: repeat(${appsPerRow}, minmax(0, 1fr)) !important;
+		grid-template-columns: repeat(${appsPerRow}, 1fr) !important;
 		gap: 10px !important;
 		margin-bottom: 10px !important;
-		width: 100% !important;
 		box-sizing: border-box !important;
 	  }
-	  
-	  ${containerSelector} .app-row > * {
-		width: 100% !important;
+	  .app-icon {
 		aspect-ratio: 1/1 !important;
 		display: flex !important;
 		align-items: center !important;
 		justify-content: center !important;
+		width: 100% !important;
 		box-sizing: border-box !important;
 	  }
-	  
-	  ${containerSelector} .app-spacer {
+	  .app-spacer {
 		visibility: hidden !important;
+		aspect-ratio: 1/1 !important;
 	  }
 	`;
 	document.head.appendChild(style);
-	
-	// Get all app elements
-	const apps = Array.from(container.querySelectorAll('.app-icon, [app-name], [data-app]'))
-	  .filter(el => !el.classList.contains('app-row'));
-	
+  
+	// Clear any existing rows while preserving the apps
+	const apps = [];
+	const children = Array.from(container.children);
+  
+	children.forEach(child => {
+	  if (child.classList?.contains('app-icon') || 
+		  child.hasAttribute?.('app-name') ||
+		  child.tagName?.toLowerCase().includes('app')) {
+		apps.push(child);
+	  }
+	});
+  
 	// Clear container
 	container.innerHTML = '';
-	
-	// Create rows
+  
+	// Create rows with exact item counts
 	for (let i = 0; i < apps.length; i += appsPerRow) {
 	  const row = document.createElement("div");
 	  row.className = "app-row";
-	  
-	  // Add apps to this row
-	  for (let j = 0; j < appsPerRow; j++) {
-		const appIndex = i + j;
-		if (appIndex < apps.length) {
-		  row.appendChild(apps[appIndex]);
-		} else {
-		  // Add spacer for empty slots
-		  const spacer = document.createElement("div");
-		  spacer.className = "app-spacer";
-		  row.appendChild(spacer);
-		}
+  
+	  // Get apps for this row
+	  const rowApps = apps.slice(i, i + appsPerRow);
+  
+	  // Add apps to row
+	  rowApps.forEach(app => {
+		// Ensure app has proper styling
+		app.style.gridColumn = 'auto';
+		app.style.width = '100%';
+		app.style.boxSizing = 'border-box';
+		row.appendChild(app);
+	  });
+  
+	  // Fill remaining slots with spacers to maintain grid alignment
+	  const remainingSlots = appsPerRow - rowApps.length;
+	  for (let j = 0; j < remainingSlots; j++) {
+		const spacer = document.createElement("div");
+		spacer.className = "app-spacer";
+		row.appendChild(spacer);
 	  }
-	  
+  
 	  container.appendChild(row);
 	}
   }
+		

@@ -11,6 +11,7 @@ export const app = _component("ai-chat-app", html`
     <div id="jarvis-orb" class="idle"></div>
 
     <input-area>
+      <button id="searchButton" title="Search">&#128269;</button>
       <textarea id="messageInput" placeholder="Type a message..." autocomplete="off" rows="1"></textarea>
       <button id="sendButton">Send</button>
     </input-area>
@@ -21,6 +22,7 @@ function boot_up_app(app) {
   const conversationArea = app.querySelector("conversation-area");
   const messageInput = app.querySelector("#messageInput");
   const sendButton = app.querySelector("#sendButton");
+  const searchButton = app.querySelector("#searchButton");
   const jarvisOrb = app.querySelector("#jarvis-orb");
 
   const GEMINI_API_KEY = "AIzaSyBmvvOHdCEkqg8UYVh2tVoe2EFEV5rLYvE";
@@ -37,7 +39,7 @@ function boot_up_app(app) {
   function renderMessages() {
     conversationArea.innerHTML = "";
     messages.forEach(({ user, text }, index) => {
-      if (index === 0) return; // Hide first system message
+      if (index === 0) return; // Hide system
       const bubble = document.createElement("div");
       bubble.className = user === "You" ? "message sent" : "message received";
       bubble.textContent = `${user}: ${text}`;
@@ -62,7 +64,6 @@ function boot_up_app(app) {
     if (isThinking) return;
     jarvisOrb.classList.add("typing");
     jarvisOrb.classList.remove("idle", "thinking");
-
     clearTimeout(jarvisOrb.typingTimeout);
     jarvisOrb.typingTimeout = setTimeout(() => {
       if (!isThinking) {
@@ -71,26 +72,6 @@ function boot_up_app(app) {
       }
     }, 1500);
   });
-
-  async function fetchScrape(url) {
-    try {
-      const resp = await fetch('https://nova-os-messaging-backend2.onrender.com/apify-scrape', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
-      });
-      const data = await resp.json();
-      if (data.success) {
-        // Return the scraped text or structured data you want
-        return data.results.map(item => item.text || item.content).join('\n');
-      }
-      return "Sorry, couldn't scrape the page.";
-    } catch (e) {
-      console.error('Scraping failed:', e);
-      return "Error scraping page.";
-    }
-  }
-  
 
   async function callGeminiAPI(prompt) {
     const history = messages.map(m => ({
@@ -112,11 +93,15 @@ function boot_up_app(app) {
     try {
       const response = await fetch(GEMINI_URL, requestOptions);
       const data = await response.json();
+      if (data.error) {
+        console.error("Gemini API error:", data.error);
+        return null;
+      }
       let answer = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
       return answer.trim();
     } catch (err) {
       console.error("Gemini API error:", err);
-      return "Sorry, I couldn't process that.";
+      return null;
     }
   }
 
@@ -131,36 +116,14 @@ function boot_up_app(app) {
 
     let answer = await callGeminiAPI(text);
 
-    const lower = answer.toLowerCase();
-    if (
-      !answer ||
-      answer.length < 5 ||
-      lower.includes("i don't know") ||
-      lower.includes("sorry") ||
-      lower.includes("as an ai") ||
-      lower.includes("unable")
-    ) {
-      try {
-        const resp = await fetch("https://nova-os-messaging-backend2.onrender.com/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            prompt: text,
-            history: messages
-              .filter(m => m.user !== "System")
-              .map(m => ({
-                role: m.user === "You" ? "user" : "assistant",
-                content: m.text
-              }))
-          }),
-        });
-        const data = await resp.json();
-        if (data.success && data.answer) {
-          answer = data.answer;
-        }
-      } catch (err) {
-        console.error("Backend fallback error:", err);
-      }
+    if (!answer) {
+      stopThinking();
+      messages.push({
+        user: "AI",
+        text: "Sorry, Delta is overloaded or you have reached your limit. To keep chatting, enter the dev password: Cedar Point Ahh"
+      });
+      renderMessages();
+      return;
     }
 
     messages.push({ user: "AI", text: answer });
@@ -169,13 +132,59 @@ function boot_up_app(app) {
     stopThinking();
   }
 
-  // ✅ ✅ ✅ This was missing:
   sendButton.addEventListener("click", sendMessage);
   messageInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
+  });
+
+  searchButton.addEventListener("click", async () => {
+    const text = messageInput.value.trim();
+    if (!text) return;
+    startThinking();
+
+    // 1️⃣ Get search keywords
+    const searchPrompt = `Based on the user's question: "${text}", what keywords should I search online to get the best answer? Reply with only the keywords, nothing else.`;
+    let keywords = await callGeminiAPI(searchPrompt);
+    if (!keywords) {
+      stopThinking();
+      messages.push({
+        user: "AI",
+        text: "Sorry, Delta is overloaded or you have reached your limit. To keep chatting, enter the dev password: Cedar Point Ahh"
+      });
+      renderMessages();
+      return;
+    }
+
+    // 2️⃣ Search backend
+    const searchResp = await fetch('https://nova-os-messaging-backend2.onrender.com/duck-search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: keywords })
+    });
+    const searchData = await searchResp.json();
+    const webResults = searchData.results.join("\n");
+
+    // 3️⃣ Final answer with results
+    const finalPrompt = `User question: "${text}"\n\nWeb search results:\n${webResults}\n\nPlease provide a clear, helpful answer using this information.`;
+    let finalAnswer = await callGeminiAPI(finalPrompt);
+
+    if (!finalAnswer) {
+      stopThinking();
+      messages.push({
+        user: "AI",
+        text: "Sorry, Delta is overloaded or you have reached your limit. To keep chatting, enter the dev password: Cedar Point Ahh"
+      });
+      renderMessages();
+      return;
+    }
+
+    messages.push({ user: "You", text });
+    messages.push({ user: "AI", text: finalAnswer });
+    renderMessages();
+    stopThinking();
   });
 
   jarvisOrb.classList.add("idle");

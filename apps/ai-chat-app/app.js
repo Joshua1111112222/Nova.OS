@@ -9,6 +9,8 @@ export const app = _component("ai-chat-app", html`
     <conversation-area></conversation-area>
 
     <div id="jarvis-orb" class="idle"></div>
+    <div id="rate-monitor">Your rates are being monitored</div>
+
 
     <input-area>
       <button id="searchButton" title="Search">&#128269;</button>

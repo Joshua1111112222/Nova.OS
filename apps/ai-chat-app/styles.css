@@ -129,6 +129,25 @@
   #sendButton:hover {
     background-color: #2e72f5;
   }
+/*Rate monitor*/
+  #rate-monitor {
+    position: fixed;
+    top: 8px;
+    right: 12px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.3); /* faint, semi-transparent */
+    font-family: 'Open Sans', sans-serif;
+    user-select: none;
+    pointer-events: none;
+    z-index: 1000;
+    transition: color 0.3s ease;
+    cursor: default;
+  }
+  
+  #rate-monitor:hover {
+    color: rgba(255, 255, 255, 0.6);
+  }
+  
   
   /* Jarvis Orb Container */
   #jarvis-orb {

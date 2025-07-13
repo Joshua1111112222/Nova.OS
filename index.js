@@ -72,3 +72,34 @@ function loadHome() {
 		style("loading-bar").display = "none";
 	},1000);
 }
+
+function wrapAppsInRows(containerSelector, appsPerRow = 4) {
+	const container = document.querySelector(containerSelector);
+	if (!container) return;
+  
+	// Get all app elements (children)
+	const apps = Array.from(container.children);
+  
+	// Clear container
+	container.innerHTML = "";
+  
+	for (let i = 0; i < apps.length; i += appsPerRow) {
+	  const row = document.createElement("div");
+	  row.className = "app-row";
+	  row.style.display = "flex";
+	  row.style.gap = "10px";
+	  row.style.marginBottom = "10px";
+  
+	  apps.slice(i, i + appsPerRow).forEach(app => {
+		app.style.flex = `1 1 calc(${100 / appsPerRow}% - 10px)`;
+		app.style.boxSizing = "border-box";
+		row.appendChild(app);
+	  });
+  
+	  container.appendChild(row);
+	}
+  }
+  
+  // Call after apps are added to <app-main>
+  wrapAppsInRows("app-main", 4);
+  

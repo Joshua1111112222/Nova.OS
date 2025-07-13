@@ -1,23 +1,27 @@
 export const app_name = "ai-chat-app";
 
-export const app = _component("ai-chat-app", html`
-  <link rel="stylesheet" type="text/css" href="./apps/ai-chat-app/styles.css" />
+export const app = _component(
+  "ai-chat-app",
+  html`
+    <link rel="stylesheet" type="text/css" href="./apps/ai-chat-app/styles.css" />
 
-  <main-area>
-    <header-title>AI Chat</header-title>
+    <main-area>
+      <header-title>AI Chat</header-title>
 
-    <conversation-area></conversation-area>
+      <conversation-area></conversation-area>
 
-    <div id="jarvis-orb" class="idle"></div>
-    <div id="rate-monitor">Your rates are being monitored</div>
+      <div id="jarvis-orb" class="idle"></div>
+      <div id="rate-monitor">Your rates are being monitored</div>
 
-    <input-area>
-      <button id="searchButton" title="Search">&#128269;</button>
-      <textarea id="messageInput" placeholder="Type a message..." autocomplete="off" rows="1"></textarea>
-      <button id="sendButton">Send</button>
-    </input-area>
-  </main-area>
-`, boot_up_app);
+      <input-area>
+        <button id="searchButton" title="Search">&#128269;</button>
+        <textarea id="messageInput" placeholder="Type a message..." autocomplete="off" rows="1"></textarea>
+        <button id="sendButton">Send</button>
+      </input-area>
+    </main-area>
+  `,
+  boot_up_app
+);
 
 function boot_up_app(app) {
   const conversationArea = app.querySelector("conversation-area");
@@ -27,12 +31,13 @@ function boot_up_app(app) {
   const jarvisOrb = app.querySelector("#jarvis-orb");
   const rateMonitor = app.querySelector("#rate-monitor");
 
-  const GEMINI_API_KEY = "AIzaSyBmvvOHdCEkqg8UYVh2tVoe2EFEV5rLYvE";
-  const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+  const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+
 
   let messages = [
     {
-      user: "AI",
+      user: "SYSTEM",
       text: "You are an AI named Delta, created by Joshua The. Your mission is to follow what the user tells you to your extent and to be helpful and never harmful."
     }
   ];
@@ -41,7 +46,6 @@ function boot_up_app(app) {
   const MESSAGE_LIMIT = 10;
   let messageCount = 0;
 
-  // subtle style for rate monitor
   rateMonitor.style.position = "fixed";
   rateMonitor.style.top = "10px";
   rateMonitor.style.right = "10px";
@@ -53,7 +57,7 @@ function boot_up_app(app) {
   function renderMessages() {
     conversationArea.innerHTML = "";
     messages.forEach(({ user, text }, index) => {
-      if (index === 0) return; // hide system prompt in UI
+      if (user === "SYSTEM") return; // hide system prompt in UI
       const bubble = document.createElement("div");
       bubble.className = user === "You" ? "message sent" : "message received";
       bubble.textContent = `${user}: ${text}`;
@@ -87,26 +91,13 @@ function boot_up_app(app) {
     }, 1500);
   });
 
-  async function callGeminiAPI(prompt) {
-    // build history in Gemini expected format
-    const history = messages.map(m => ({
-      role: m.user === "You" ? "user" : "model",
-      parts: [{ text: m.text }]
-    }));
-
-    const requestOptions = {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          ...history,
-          { role: "user", parts: [{ text: prompt }] }
-        ]
-      }),
-    };
-
+  async function callGeminiAPI(history) {
     try {
-      const response = await fetch(GEMINI_URL, requestOptions);
+      const response = await fetch(GEMINI_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contents: history })
+      });
       const data = await response.json();
       if (data.error) {
         console.error("Gemini API error:", data.error);
@@ -139,7 +130,7 @@ function boot_up_app(app) {
         kickUserOut();
         return;
       } else {
-        messageCount = 0; // reset count on correct password
+        messageCount = 0;
       }
     }
 
@@ -151,13 +142,82 @@ function boot_up_app(app) {
 
     startThinking();
 
-    let answer = await callGeminiAPI(text);
+    // ✅ Always build prompt with SYSTEM first as `role: user`
+    const history = [
+      {
+        role: "user",
+        parts: [{ text: messages[0].text }]
+      },
+      ...messages.slice(1).map(m => ({
+        role: m.user === "You" ? "user" : "model",
+        parts: [{ text: m.text }]
+      }))
+    ];
+
+    let answer = await callGeminiAPI(history);
 
     if (!answer) {
       stopThinking();
       messages.push({
         user: "AI",
-        text: "Sorry, Delta is overloaded or you have reached your limit. Please try again later."
+        text: "Sorry, Delta is overloaded or unreachable. Please try again later."
+      });
+      renderMessages();
+      return;
+    }
+
+    messages.push({ user: "AI", text: answer });
+    renderMessages();
+
+    stopThinking();
+    messageCount++;
+  }
+
+  async function groundedSearch() {
+    if (messageCount >= MESSAGE_LIMIT) {
+      if (!requestDevPassword()) {
+        kickUserOut();
+        return;
+      } else {
+        messageCount = 0;
+      }
+    }
+
+    const text = messageInput.value.trim();
+    if (!text) return;
+    messageInput.value = "";
+    messages.push({ user: "You", text });
+    renderMessages();
+
+    startThinking();
+
+    // ✅ Always build prompt with SYSTEM first as `role: user`
+    const history = [
+      {
+        role: "user",
+        parts: [{ text: messages[0].text }]
+      },
+      ...messages.slice(1).map(m => ({
+        role: m.user === "You" ? "user" : "model",
+        parts: [{ text: m.text }]
+      })),
+      {
+        role: "user",
+        parts: [
+          {
+            text: `Use grounded search to answer this question:\n\n${text}`
+          }
+        ]
+      }
+    ];
+
+    let answer = await callGeminiAPI(history);
+
+    if (!answer) {
+      stopThinking();
+      messages.push({
+        user: "AI",
+        text: "Sorry, Delta couldn't complete the grounded search. Try again later."
       });
       renderMessages();
       return;
@@ -171,89 +231,13 @@ function boot_up_app(app) {
   }
 
   sendButton.addEventListener("click", sendMessage);
+  searchButton.addEventListener("click", groundedSearch);
+
   messageInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
-  });
-
-  searchButton.addEventListener("click", async () => {
-    if (messageCount >= MESSAGE_LIMIT) {
-      if (!requestDevPassword()) {
-        kickUserOut();
-        return;
-      } else {
-        messageCount = 0; // reset count on correct password
-      }
-    }
-
-    const text = messageInput.value.trim();
-    if (!text) return;
-
-    startThinking();
-
-    // 1️⃣ Get search keywords from Gemini AI
-    const searchPrompt = `Based on the user's question: "${text}", what keywords should I search online to get the best answer? Reply with only the keywords, nothing else.`;
-    let keywords = await callGeminiAPI(searchPrompt);
-    if (!keywords) {
-      stopThinking();
-      messages.push({
-        user: "AI",
-        text: "Sorry, Delta is overloaded or you have reached your limit. Please try again later."
-      });
-      renderMessages();
-      return;
-    }
-
-    // 2️⃣ Search backend
-    try {
-      const searchResp = await fetch('https://nova-os-messaging-backend2.onrender.com/duck-search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: keywords })
-      });
-      const searchData = await searchResp.json();
-
-      if (!searchData.success) {
-        stopThinking();
-        messages.push({
-          user: "AI",
-          text: "Sorry, I couldn't find any results for your query."
-        });
-        renderMessages();
-        return;
-      }
-
-      // searchData.results is a string, not array
-      const webResults = searchData.results;
-
-      // 3️⃣ Final answer with results
-      const finalPrompt = `User question: "${text}"\n\nWeb search results:\n${webResults}\n\nPlease provide a clear, helpful answer using this information.`;
-      let finalAnswer = await callGeminiAPI(finalPrompt);
-
-      if (!finalAnswer) {
-        stopThinking();
-        messages.push({
-          user: "AI",
-          text: "Sorry, Delta is overloaded or you have reached your limit. Please try again later."
-        });
-        renderMessages();
-        return;
-      }
-
-      messages.push({ user: "You", text }); // Add user message only once here
-      messages.push({ user: "AI", text: finalAnswer });
-      renderMessages();
-
-    } catch (err) {
-      console.error("Search error:", err);
-      messages.push({ user: "AI", text: "Search failed. Please try again later." });
-      renderMessages();
-    }
-
-    stopThinking();
-    messageCount++;
   });
 
   jarvisOrb.classList.add("idle");

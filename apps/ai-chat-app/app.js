@@ -141,7 +141,7 @@ function boot_up_app(app) {
       lower.includes("unable")
     ) {
       try {
-        const resp = await fetch("https://nova-os-messaging-backend.onrender.com/chat", {
+        const resp = await fetch("https://nova-os-messaging-backend2.onrender.com/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

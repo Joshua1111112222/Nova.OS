@@ -117,6 +117,7 @@ function loadHome() {
 		justify-content: center !important;
 		width: 100% !important;
 		box-sizing: border-box !important;
+		cursor: pointer !important; /* Ensure apps are clickable */
 	  }
 	  .app-spacer {
 		visibility: hidden !important;
@@ -154,6 +155,15 @@ function loadHome() {
 		app.style.gridColumn = 'auto';
 		app.style.width = '100%';
 		app.style.boxSizing = 'border-box';
+  
+		// Reattach event listeners to ensure apps are clickable
+		const appName = app.getAttribute('app-name');
+		if (appName) {
+		  app.addEventListener('click', () => {
+			app_handler.openApp(appName); // Ensure the app opens correctly
+		  });
+		}
+  
 		row.appendChild(app);
 	  });
   
@@ -168,4 +178,3 @@ function loadHome() {
 	  container.appendChild(row);
 	}
   }
-		

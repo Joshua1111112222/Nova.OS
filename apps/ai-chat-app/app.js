@@ -1,133 +1,260 @@
-export const app_name = "ai-chat-app";
+export const app_name = "chat-app";
 
-export const app = _component("ai-chat-app", html`
-  <link rel="stylesheet" type="text/css" href="./apps/ai-chat-app/styles.css" />
-
-  <main-area>
-    <header-title>AI Chat</header-title>
-
-    <conversation-area></conversation-area>
-
-    <div id="jarvis-orb" class="idle"></div>
-
-    <input-area>
-      <textarea id="messageInput" placeholder="Type a message..." autocomplete="off" rows="1"></textarea>
-      <button id="sendButton">Send</button>
-    </input-area>
-  </main-area>
-`, boot_up_app);
-
-function boot_up_app(app) {
-  const conversationArea = app.querySelector("conversation-area");
-  const messageInput = app.querySelector("#messageInput");
-  const sendButton = app.querySelector("#sendButton");
-  const jarvisOrb = app.querySelector("#jarvis-orb");
-
-  const GEMINI_API_KEY = "AIzaSyBmvvOHdCEkqg8UYVh2tVoe2EFEV5rLYvE"; // ✅ Your test API key
-  const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-
-  let messages = [
-    {
-      user: "AI",
-      text: "You are an AI named Delta, created by Joshua The. Your mission is to follow what the user tells you to your extent and to be helpful and never harmful."
+export const app = _component("chat-app", html`
+  <style>
+    /* Your entire styles.css inlined for simplicity */
+    :host {
+      display: block;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #eee;
+      background: #121212;
+      height: 100vh;
+      position: relative;
+      overflow: hidden;
     }
-  ];
-  let isThinking = false;
 
-  function renderMessages() {
-    conversationArea.innerHTML = "";
-    messages.forEach(({ user, text }) => {
-      const bubble = document.createElement("div");
-      bubble.className = user === "You" ? "message sent" : "message received";
-      bubble.textContent = `${user}: ${text}`;
-      conversationArea.appendChild(bubble);
-    });
-    conversationArea.scrollTop = conversationArea.scrollHeight;
-  }
+    .jarvis-orb {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      background: radial-gradient(circle at center, #6200ee 0%, #2a2a2a 70%);
+      box-shadow:
+        0 0 30px #6200ee,
+        0 0 60px #bb86fc,
+        0 0 90px #6200ee;
+      opacity: 0.12;
+      animation: pulse 3s infinite ease-in-out;
+      pointer-events: none;
+      z-index: 900;
+    }
 
-  function startThinking() {
-    isThinking = true;
-    jarvisOrb.classList.add("thinking");
-    jarvisOrb.classList.remove("idle", "typing");
-  }
-
-  function stopThinking() {
-    isThinking = false;
-    jarvisOrb.classList.remove("thinking", "typing");
-    jarvisOrb.classList.add("idle");
-  }
-
-  messageInput.addEventListener("input", () => {
-    if (isThinking) return;
-    jarvisOrb.classList.add("typing");
-    jarvisOrb.classList.remove("idle", "thinking");
-
-    clearTimeout(jarvisOrb.typingTimeout);
-    jarvisOrb.typingTimeout = setTimeout(() => {
-      if (!isThinking) {
-        jarvisOrb.classList.remove("typing");
-        jarvisOrb.classList.add("idle");
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 0.12;
+        box-shadow:
+          0 0 30px #6200ee,
+          0 0 60px #bb86fc,
+          0 0 90px #6200ee;
       }
-    }, 1500);
+      50% {
+        opacity: 0.3;
+        box-shadow:
+          0 0 50px #bb86fc,
+          0 0 80px #6200ee,
+          0 0 110px #bb86fc;
+      }
+    }
+
+    .chat-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 350px;
+      max-height: 500px;
+      background: rgba(30, 30, 30, 0.95);
+      border-radius: 12px;
+      box-shadow: 0 0 30px #6200ee;
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+      overflow-y: auto;
+      gap: 8px;
+      z-index: 1000;
+    }
+
+    .chat {
+      display: flex;
+      gap: 10px;
+      max-width: 80%;
+      align-items: flex-end;
+      user-select: text;
+    }
+
+    .chat.outgoing {
+      margin-left: auto;
+      justify-content: flex-end;
+    }
+
+    .chat.outgoing p {
+      background: linear-gradient(45deg, #6200ee, #3700b3);
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 18px 18px 0 18px;
+      font-size: 15px;
+      word-wrap: break-word;
+    }
+
+    .chat.incoming {
+      justify-content: flex-start;
+    }
+
+    .chat.incoming p {
+      background: #2a2a2a;
+      color: #bb86fc;
+      padding: 10px 14px;
+      border-radius: 18px 18px 18px 0;
+      font-size: 15px;
+      word-wrap: break-word;
+    }
+
+    .chat.incoming span {
+      color: #bb86fc;
+      font-size: 22px;
+    }
+
+    .chat p.error {
+      color: #ff5555;
+      font-style: italic;
+    }
+
+    .chat-input {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 350px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      background: rgba(40, 40, 40, 0.95);
+      padding: 12px 16px;
+      border-radius: 30px;
+      box-shadow: 0 0 15px #6200ee;
+      z-index: 1001;
+    }
+
+    .chat-input textarea {
+      flex-grow: 1;
+      resize: none;
+      border: none;
+      background: transparent;
+      color: #eee;
+      font-size: 16px;
+      height: 40px;
+      line-height: 20px;
+      padding: 8px 12px;
+      border-radius: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      outline: none;
+      overflow-y: auto;
+    }
+
+    .chat-input span.send-btn {
+      cursor: pointer;
+      color: #6200ee;
+      font-size: 30px;
+      user-select: none;
+      transition: color 0.2s ease;
+    }
+
+    .chat-input span.send-btn:hover {
+      color: #3700b3;
+    }
+  </style>
+
+  <div class="jarvis-orb"></div>
+
+  <ul class="chat-container"></ul>
+
+  <div class="chat-input">
+    <textarea placeholder="Type your message..." rows="1"></textarea>
+    <span class="material-symbols-outlined send-btn">send</span>
+  </div>
+`);
+
+let messageHistory = [];
+let chatContainer;
+let chatInput;
+let sendBtn;
+
+function createChatLi(message, className) {
+  const li = document.createElement("li");
+  li.className = `chat ${className}`;
+  li.innerHTML =
+    className === "outgoing"
+      ? `<p>${message}</p>`
+      : `<span class="material-symbols-outlined">smart_toy</span><p>${message}</p>`;
+  return li;
+}
+
+function setup() {
+  chatContainer = app.shadowRoot.querySelector(".chat-container");
+  chatInput = app.shadowRoot.querySelector(".chat-input textarea");
+  sendBtn = app.shadowRoot.querySelector(".chat-input span.send-btn");
+
+  const inputInitHeight = chatInput.scrollHeight;
+
+  chatInput.addEventListener("input", () => {
+    chatInput.style.height = inputInitHeight + "px";
+    chatInput.style.height = chatInput.scrollHeight + "px";
   });
 
-  async function callGeminiAPI(prompt) {
-    const history = messages.map(m => ({
-      role: m.user === "You" ? "user" : "model",
-      parts: [{ text: m.text }]
-    }));
-
-    const requestOptions = {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          ...history,
-          { role: "user", parts: [{ text: prompt }] }
-        ]
-      }),
-    };
-
-    try {
-      const response = await fetch(GEMINI_URL, requestOptions);
-      const data = await response.json();
-      let answer = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      return answer.trim();
-    } catch (err) {
-      console.error("Gemini API error:", err);
-      return "Sorry, I couldn't process that.";
-    }
-  }
-
-  async function sendMessage() {
-    const text = messageInput.value.trim();
-    if (!text) return;
-    messageInput.value = "";
-    messages.push({ user: "You", text });
-    renderMessages();
-
-    startThinking();
-
-    let answer = await callGeminiAPI(text);
-
-    if (!answer || answer.length < 5) {
-      answer = "Sorry, I couldn't process that.";
-    }
-
-    messages.push({ user: "AI", text: answer });
-    renderMessages();
-
-    stopThinking();
-  }
-
-  sendButton.addEventListener("click", sendMessage);
-  messageInput.addEventListener("keydown", (e) => {
+  chatInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      handleChat();
     }
   });
 
-  jarvisOrb.classList.add("idle");
-  renderMessages();
+  sendBtn.addEventListener("click", handleChat);
 }
+
+async function generateResponse(incomingChatLi) {
+  const messageElement = incomingChatLi.querySelector("p");
+  try {
+    const lastUserMessage = chatContainer.querySelector(
+      "li.chat.outgoing:last-child p"
+    ).textContent;
+
+    const payload = {
+      prompt: lastUserMessage,
+      history: messageHistory,
+    };
+
+    const res = await fetch("https://nova-os-messaging-backend.onrender.com", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      messageElement.textContent = data.answer;
+
+      messageHistory.push({ role: "user", content: lastUserMessage });
+      messageHistory.push({ role: "assistant", content: data.answer });
+    } else {
+      messageElement.textContent = `Error: ${data.error}`;
+      messageElement.classList.add("error");
+    }
+  } catch (e) {
+    messageElement.textContent = "Error connecting to server.";
+    messageElement.classList.add("error");
+  } finally {
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+  }
+}
+
+function handleChat() {
+  const userMessage = chatInput.value.trim();
+  if (!userMessage) return;
+
+  chatInput.value = "";
+  chatInput.style.height = "40px";
+
+  chatContainer.appendChild(createChatLi(userMessage, "outgoing"));
+  chatContainer.scrollTop = chatContainer.scrollHeight;
+
+  const incomingChatLi = createChatLi("Thinking...", "incoming");
+  chatContainer.appendChild(incomingChatLi);
+  chatContainer.scrollTop = chatContainer.scrollHeight;
+
+  generateResponse(incomingChatLi);
+}
+
+// Wait for DOM or component to mount
+setTimeout(setup, 50);

@@ -66,49 +66,63 @@ function checkIfAllAppsLoaded() {
 
 //-------------------------LOADING HOMEPAGE-------------------------
 function loadHome() {
-  app_handler.system.homeBarApps.forEach(app => {
-    app_handler.addAppToHomeBar(select("app-bar"), app.app_name);
-  });
-  app_handler.system.mainAreaApps.forEach(app => {
-    app_handler.addAppToMainArea(select("app-main"), app.app_name);
-  });
-
-  // Wrap apps in rows after they are added
-  wrapAppsInRows("app-main", 5);
-
-  app_handler.attachBodyHandle(document.body);
-
-  bar_amount = 1;
-  loading_bar.setPercent(bar_amount);
-  setTimeout(() => {
-    style("loading-bar").display = "none";
-  }, 1000);
-}
+	app_handler.system.homeBarApps.forEach(app => {
+	  app_handler.addAppToHomeBar(select("app-bar"), app.app_name);
+	});
+	
+	app_handler.system.mainAreaApps.forEach(app => {
+	  app_handler.addAppToMainArea(select("app-main"), app.app_name);
+	});
+  
+	// Wait for DOM to update before wrapping
+	setTimeout(() => {
+	  wrapAppsInRows("app-main", 5);
+	}, 0);
+  
+	app_handler.attachBodyHandle(document.body);
+  
+	bar_amount = 1;
+	loading_bar.setPercent(bar_amount);
+	setTimeout(() => {
+	  style("loading-bar").display = "none";
+	}, 1000);
+  }
 
 function wrapAppsInRows(containerSelector, appsPerRow = 5) {
-  const container = document.querySelector(containerSelector);
-  if (!container) return;
-
-  // Get all app elements (children)
-  const apps = Array.from(container.children);
-
-  // Clear container
-  container.innerHTML = "";
-
-  for (let i = 0; i < apps.length; i += appsPerRow) {
-    const row = document.createElement("div");
-    row.className = "app-row";
-    row.style.display = "flex";
-    row.style.gap = "10px";
-    row.style.marginBottom = "10px";
-
-    apps.slice(i, i + appsPerRow).forEach(app => {
-      // Adjust flex basis to fit 5 apps per row considering gaps
-      app.style.flex = `1 1 calc(${100 / appsPerRow}% - ${(10 * (appsPerRow - 1)) / appsPerRow}px)`;
-      app.style.boxSizing = "border-box";
-      row.appendChild(app);
-    });
-
-    container.appendChild(row);
+	const container = document.querySelector(containerSelector);
+	if (!container) return;
+  
+	// Get all app elements (direct children only)
+	const apps = Array.from(container.children).filter(child => 
+	  child.classList.contains('app-icon') || child.hasAttribute('app-name')
+	);
+  
+	// Clear container
+	container.innerHTML = "";
+  
+	// Calculate width accounting for gaps (10px between items)
+	const gapSize = 10;
+	const appWidth = `calc(${100 / appsPerRow}% - ${gapSize * (appsPerRow - 1) / appsPerRow}px)`;
+  
+	// Create rows
+	for (let i = 0; i < apps.length; i += appsPerRow) {
+	  const row = document.createElement("div");
+	  row.className = "app-row";
+	  row.style.display = "flex";
+	  row.style.flexWrap = "wrap";
+	  row.style.gap = `${gapSize}px`;
+	  row.style.marginBottom = `${gapSize}px`;
+	  row.style.width = "100%";
+  
+	  // Add apps to this row
+	  const rowApps = apps.slice(i, i + appsPerRow);
+	  rowApps.forEach(app => {
+		app.style.flex = `0 0 ${appWidth}`;
+		app.style.maxWidth = appWidth;
+		app.style.minWidth = "0"; // Prevent flex items from overflowing
+		row.appendChild(app);
+	  });
+  
+	  container.appendChild(row);
+	}
   }
-}

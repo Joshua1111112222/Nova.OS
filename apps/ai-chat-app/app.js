@@ -23,13 +23,13 @@ function boot_up_app(app) {
   const sendButton = app.querySelector("#sendButton");
   const jarvisOrb = app.querySelector("#jarvis-orb");
 
-  const GEMINI_API_KEY = "AIzaSyBmvvOHdCEkqg8UYVh2tVoe2EFEV5rLYvE"; // ✅ Your test API key
+  const GEMINI_API_KEY = "AIzaSyBmvvOHdCEkqg8UYVh2tVoe2EFEV5rLYvE";
   const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
   let messages = [
     {
       user: "AI",
-      text:"You are an AI named Delta, created by Joshua The. Your mission is to follow what the user tells you to your extent and to be helpful and never harmful."
+      text: "You are an AI named Delta, created by Joshua The. Your mission is to follow what the user tells you to your extent and to be helpful and never harmful."
     }
   ];
   let isThinking = false;
@@ -37,7 +37,7 @@ function boot_up_app(app) {
   function renderMessages() {
     conversationArea.innerHTML = "";
     messages.forEach(({ user, text }, index) => {
-        if (index === 0) return; // Always skip the first message in memory
+      if (index === 0) return; // Hide first system message
       const bubble = document.createElement("div");
       bubble.className = user === "You" ? "message sent" : "message received";
       bubble.textContent = `${user}: ${text}`;
@@ -45,7 +45,6 @@ function boot_up_app(app) {
     });
     conversationArea.scrollTop = conversationArea.scrollHeight;
   }
-  
 
   function startThinking() {
     isThinking = true;
@@ -107,11 +106,11 @@ function boot_up_app(app) {
     messageInput.value = "";
     messages.push({ user: "You", text });
     renderMessages();
-  
+
     startThinking();
-  
+
     let answer = await callGeminiAPI(text);
-  
+
     const lower = answer.toLowerCase();
     if (
       !answer ||
@@ -128,7 +127,7 @@ function boot_up_app(app) {
           body: JSON.stringify({
             prompt: text,
             history: messages
-              .filter(m => m.user !== "System") // ignore system message in backend history
+              .filter(m => m.user !== "System")
               .map(m => ({
                 role: m.user === "You" ? "user" : "assistant",
                 content: m.text
@@ -143,13 +142,21 @@ function boot_up_app(app) {
         console.error("Backend fallback error:", err);
       }
     }
-  
+
     messages.push({ user: "AI", text: answer });
     renderMessages();
-  
+
     stopThinking();
   }
-  
+
+  // ✅ ✅ ✅ This was missing:
+  sendButton.addEventListener("click", sendMessage);
+  messageInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
 
   jarvisOrb.classList.add("idle");
   renderMessages();

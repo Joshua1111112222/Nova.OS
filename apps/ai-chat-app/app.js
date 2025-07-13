@@ -29,7 +29,7 @@ function boot_up_app(app) {
   let messages = [
     {
       user: "AI",
-      text: "You are an AI named Delta, created by Joshua The. Your mission is to follow what the user tells you to your extent and to be helpful and never harmful."
+      text:""
     }
   ];
   let isThinking = false;

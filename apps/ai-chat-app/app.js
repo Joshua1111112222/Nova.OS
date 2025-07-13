@@ -36,6 +36,9 @@ function boot_up_app(app) {
   ];
   let isThinking = false;
 
+  const MESSAGE_LIMIT = 10;
+  let messageCount = 0;
+
   function renderMessages() {
     conversationArea.innerHTML = "";
     messages.forEach(({ user, text }, index) => {
@@ -105,7 +108,29 @@ function boot_up_app(app) {
     }
   }
 
+  function requestDevPassword() {
+    const input = prompt("You have reached your message limit. Please enter the dev password to continue:");
+    return input === "Cedar Point Ahh";
+  }
+
+  function kickUserOut() {
+    messages = [{ user: "AI", text: "Access denied. You have been logged out of AI chat." }];
+    renderMessages();
+    messageInput.disabled = true;
+    sendButton.disabled = true;
+    searchButton.disabled = true;
+  }
+
   async function sendMessage() {
+    if (messageCount >= MESSAGE_LIMIT) {
+      if (!requestDevPassword()) {
+        kickUserOut();
+        return;
+      } else {
+        messageCount = 0; // reset count on correct password
+      }
+    }
+
     const text = messageInput.value.trim();
     if (!text) return;
     messageInput.value = "";
@@ -120,7 +145,7 @@ function boot_up_app(app) {
       stopThinking();
       messages.push({
         user: "AI",
-        text: "Sorry, Delta is overloaded or you have reached your limit. To keep chatting, enter the dev password: Cedar Point Ahh"
+        text: "Sorry, Delta is overloaded or you have reached your limit. Please try again later."
       });
       renderMessages();
       return;
@@ -130,6 +155,7 @@ function boot_up_app(app) {
     renderMessages();
 
     stopThinking();
+    messageCount++;
   }
 
   sendButton.addEventListener("click", sendMessage);
@@ -141,6 +167,15 @@ function boot_up_app(app) {
   });
 
   searchButton.addEventListener("click", async () => {
+    if (messageCount >= MESSAGE_LIMIT) {
+      if (!requestDevPassword()) {
+        kickUserOut();
+        return;
+      } else {
+        messageCount = 0; // reset count on correct password
+      }
+    }
+
     const text = messageInput.value.trim();
     if (!text) return;
     startThinking();
@@ -152,7 +187,7 @@ function boot_up_app(app) {
       stopThinking();
       messages.push({
         user: "AI",
-        text: "Sorry, Delta is overloaded or you have reached your limit. To keep chatting, enter the dev password: Cedar Point Ahh"
+        text: "Sorry, Delta is overloaded or you have reached your limit. Please try again later."
       });
       renderMessages();
       return;
@@ -175,7 +210,7 @@ function boot_up_app(app) {
       stopThinking();
       messages.push({
         user: "AI",
-        text: "Sorry, Delta is overloaded or you have reached your limit. To keep chatting, enter the dev password: Cedar Point Ahh"
+        text: "Sorry, Delta is overloaded or you have reached your limit. Please try again later."
       });
       renderMessages();
       return;
@@ -184,7 +219,9 @@ function boot_up_app(app) {
     messages.push({ user: "You", text });
     messages.push({ user: "AI", text: finalAnswer });
     renderMessages();
+
     stopThinking();
+    messageCount++;
   });
 
   jarvisOrb.classList.add("idle");

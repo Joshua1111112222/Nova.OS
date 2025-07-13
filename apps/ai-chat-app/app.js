@@ -93,32 +93,29 @@ function boot_up_app(app) {
   
 
   async function callGeminiAPI(prompt) {
-    const history = messages.map(m => ({
-      role: m.user === "You" ? "user" : "model",
-      parts: [{ text: m.text }]
-    }));
-
-    const requestOptions = {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          ...history,
-          { role: "user", parts: [{ text: prompt }] }
-        ]
-      }),
-    };
-
     try {
-      const response = await fetch(GEMINI_URL, requestOptions);
-      const data = await response.json();
-      let answer = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      return answer.trim();
+      const resp = await fetch("https://nova-os-messaging-backend2.onrender.com/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: prompt,
+          history: messages
+            .filter(m => m.user !== "System")
+            .map(m => ({
+              role: m.user === "You" ? "user" : "assistant",
+              content: m.text
+            }))
+        }),
+      });
+      const data = await resp.json();
+      if (data.success && data.answer) return data.answer;
+      return "Sorry, something went wrong.";
     } catch (err) {
-      console.error("Gemini API error:", err);
-      return "Sorry, I couldn't process that.";
+      console.error("Backend error:", err);
+      return "Error calling backend.";
     }
   }
+  
 
   async function sendMessage() {
     const text = messageInput.value.trim();
@@ -126,57 +123,16 @@ function boot_up_app(app) {
     messageInput.value = "";
     messages.push({ user: "You", text });
     renderMessages();
-
+  
     startThinking();
-
-    let answer = await callGeminiAPI(text);
-
-    const lower = answer.toLowerCase();
-    if (
-      !answer ||
-      answer.length < 5 ||
-      lower.includes("i don't know") ||
-      lower.includes("sorry") ||
-      lower.includes("as an ai") ||
-      lower.includes("unable")
-    ) {
-      try {
-        const resp = await fetch("https://nova-os-messaging-backend2.onrender.com/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            prompt: text,
-            history: messages
-              .filter(m => m.user !== "System")
-              .map(m => ({
-                role: m.user === "You" ? "user" : "assistant",
-                content: m.text
-              }))
-          }),
-        });
-        const data = await resp.json();
-        if (data.success && data.answer) {
-          answer = data.answer;
-        }
-      } catch (err) {
-        console.error("Backend fallback error:", err);
-      }
-    }
-
+  
+    const answer = await callGeminiAPI(text);
     messages.push({ user: "AI", text: answer });
     renderMessages();
-
+  
     stopThinking();
   }
-
-  // ✅ ✅ ✅ This was missing:
-  sendButton.addEventListener("click", sendMessage);
-  messageInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  });
+  
 
   jarvisOrb.classList.add("idle");
   renderMessages();

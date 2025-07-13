@@ -90,66 +90,156 @@ function loadHome() {
   function wrapAppsInRows(containerSelector, appsPerRow = 5) {
 	const container = document.querySelector(containerSelector);
 	if (!container) return;
-  
-	// Add CSS styles dynamically
+	
+	// Add CSS styles dynamically with !important to override existing styles
 	const style = document.createElement('style');
 	style.textContent = `
 	  app-main {
-		width: 100%;
-		display: flex;
-		flex-direction: column;
-		padding: 10px;
-		box-sizing: border-box;
+		width: 100% !important;
+		display: flex !important;
+		flex-direction: column !important;
+		padding: 10px !important;
+		box-sizing: border-box !important;
 	  }
 	  .app-row {
-		width: 100%;
+		width: 100% !important;
+		display: grid !important;
+		grid-template-columns: repeat(${appsPerRow}, 1fr) !important;
+		gap: 10px !important;
+		margin-bottom: 10px !important;
+		box-sizing: border-box !important;
 	  }
 	  .app-icon {
-		aspect-ratio: 1/1;
-		display: flex;
-		align-items: center;
-		justify-content: center;
+		aspect-ratio: 1/1 !important;
+		display: flex !important;
+		align-items: center !important;
+		justify-content: center !important;
+		width: 100% !important;
+		box-sizing: border-box !important;
 	  }
 	  .app-spacer {
-		visibility: hidden;
+		visibility: hidden !important;
+		aspect-ratio: 1/1 !important;
 	  }
 	`;
 	document.head.appendChild(style);
-  
+	
 	// Clear any existing rows while preserving the apps
 	const apps = [];
-	while (container.firstChild) {
-	  if (container.firstChild.classList?.contains('app-icon') || 
-		  container.firstChild.hasAttribute?.('app-name')) {
-		apps.push(container.firstChild);
+	const children = Array.from(container.children);
+	
+	children.forEach(child => {
+	  if (child.classList?.contains('app-icon') || 
+		  child.hasAttribute?.('app-name') ||
+		  child.tagName?.toLowerCase().includes('app')) {
+		apps.push(child);
 	  }
-	  container.removeChild(container.firstChild);
-	}
-  
+	});
+	
+	// Clear container
+	container.innerHTML = '';
+	
 	// Create rows with exact item counts
 	for (let i = 0; i < apps.length; i += appsPerRow) {
 	  const row = document.createElement("div");
 	  row.className = "app-row";
-	  Object.assign(row.style, {
-		display: "grid",
-		gridTemplateColumns: `repeat(${appsPerRow}, 1fr)`,
-		gap: "10px",
-		marginBottom: "10px",
-		width: "100%"
-	  });
-  
+	  
+	  // Get apps for this row
 	  const rowApps = apps.slice(i, i + appsPerRow);
+	  
+	  // Add apps to row
 	  rowApps.forEach(app => {
+		// Ensure app has proper styling
+		app.style.gridColumn = 'auto';
+		app.style.width = '100%';
+		app.style.boxSizing = 'border-box';
 		row.appendChild(app);
 	  });
-  
-	  // Fill remaining slots if needed to maintain grid
-	  while (row.children.length < appsPerRow) {
+	  
+	  // Fill remaining slots with spacers to maintain grid alignment
+	  const remainingSlots = appsPerRow - rowApps.length;
+	  for (let j = 0; j < remainingSlots; j++) {
 		const spacer = document.createElement("div");
 		spacer.className = "app-spacer";
 		row.appendChild(spacer);
 	  }
+	  
+	  container.appendChild(row);
+	}
+  }
   
+  // Alternative version with more explicit grid control
+  function wrapAppsInRowsStrict(containerSelector, appsPerRow = 5) {
+	const container = document.querySelector(containerSelector);
+	if (!container) return;
+	
+	// Remove existing style if it exists
+	const existingStyle = document.querySelector('#app-grid-style');
+	if (existingStyle) {
+	  existingStyle.remove();
+	}
+	
+	// Add new styles
+	const style = document.createElement('style');
+	style.id = 'app-grid-style';
+	style.textContent = `
+	  ${containerSelector} {
+		display: flex !important;
+		flex-direction: column !important;
+		width: 100% !important;
+		padding: 10px !important;
+		box-sizing: border-box !important;
+	  }
+	  
+	  ${containerSelector} .app-row {
+		display: grid !important;
+		grid-template-columns: repeat(${appsPerRow}, minmax(0, 1fr)) !important;
+		gap: 10px !important;
+		margin-bottom: 10px !important;
+		width: 100% !important;
+		box-sizing: border-box !important;
+	  }
+	  
+	  ${containerSelector} .app-row > * {
+		width: 100% !important;
+		aspect-ratio: 1/1 !important;
+		display: flex !important;
+		align-items: center !important;
+		justify-content: center !important;
+		box-sizing: border-box !important;
+	  }
+	  
+	  ${containerSelector} .app-spacer {
+		visibility: hidden !important;
+	  }
+	`;
+	document.head.appendChild(style);
+	
+	// Get all app elements
+	const apps = Array.from(container.querySelectorAll('.app-icon, [app-name], [data-app]'))
+	  .filter(el => !el.classList.contains('app-row'));
+	
+	// Clear container
+	container.innerHTML = '';
+	
+	// Create rows
+	for (let i = 0; i < apps.length; i += appsPerRow) {
+	  const row = document.createElement("div");
+	  row.className = "app-row";
+	  
+	  // Add apps to this row
+	  for (let j = 0; j < appsPerRow; j++) {
+		const appIndex = i + j;
+		if (appIndex < apps.length) {
+		  row.appendChild(apps[appIndex]);
+		} else {
+		  // Add spacer for empty slots
+		  const spacer = document.createElement("div");
+		  spacer.className = "app-spacer";
+		  row.appendChild(spacer);
+		}
+	  }
+	  
 	  container.appendChild(row);
 	}
   }

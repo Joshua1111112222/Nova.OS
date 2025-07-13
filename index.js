@@ -89,55 +89,67 @@ function loadHome() {
   }
   function wrapAppsInRows(containerSelector, appsPerRow = 5) {
 	const container = document.querySelector(containerSelector);
-	if (!container) {
-	  console.error("Container not found:", containerSelector);
-	  return;
+	if (!container) return;
+  
+	// Add CSS styles dynamically
+	const style = document.createElement('style');
+	style.textContent = `
+	  app-main {
+		width: 100%;
+		display: flex;
+		flex-direction: column;
+		padding: 10px;
+		box-sizing: border-box;
+	  }
+	  .app-row {
+		width: 100%;
+	  }
+	  .app-icon {
+		aspect-ratio: 1/1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	  }
+	  .app-spacer {
+		visibility: hidden;
+	  }
+	`;
+	document.head.appendChild(style);
+  
+	// Clear any existing rows while preserving the apps
+	const apps = [];
+	while (container.firstChild) {
+	  if (container.firstChild.classList?.contains('app-icon') || 
+		  container.firstChild.hasAttribute?.('app-name')) {
+		apps.push(container.firstChild);
+	  }
+	  container.removeChild(container.firstChild);
 	}
   
-	// Get ALL direct children (less strict filtering)
-	const apps = Array.from(container.children);
-	console.log("Found apps:", apps.length, apps);
-  
-	if (apps.length === 0) {
-	  console.warn("No apps found to arrange");
-	  return;
-	}
-  
-	// Calculate dimensions
-	const gapSize = 10;
-	const appWidth = `calc(${100 / appsPerRow}% - ${gapSize * (appsPerRow - 1) / appsPerRow}px)`;
-  
-	// Create document fragment for better performance
-	const fragment = document.createDocumentFragment();
-  
-	// Create rows
+	// Create rows with exact item counts
 	for (let i = 0; i < apps.length; i += appsPerRow) {
 	  const row = document.createElement("div");
 	  row.className = "app-row";
 	  Object.assign(row.style, {
-		display: "flex",
-		gap: `${gapSize}px`,
-		marginBottom: `${gapSize}px`,
-		width: "100%",
-		justifyContent: "flex-start" // Align items to the start
+		display: "grid",
+		gridTemplateColumns: `repeat(${appsPerRow}, 1fr)`,
+		gap: "10px",
+		marginBottom: "10px",
+		width: "100%"
 	  });
   
-	  // Add apps to this row
 	  const rowApps = apps.slice(i, i + appsPerRow);
 	  rowApps.forEach(app => {
-		Object.assign(app.style, {
-		  flex: `0 0 ${appWidth}`,
-		  maxWidth: appWidth,
-		  minWidth: "0", // Prevent flex items from overflowing
-		  display: "flex" // Ensure app contents are properly contained
-		});
 		row.appendChild(app);
 	  });
   
-	  fragment.appendChild(row);
-	}
+	  // Fill remaining slots if needed to maintain grid
+	  while (row.children.length < appsPerRow) {
+		const spacer = document.createElement("div");
+		spacer.className = "app-spacer";
+		row.appendChild(spacer);
+	  }
   
-	// Replace container contents in one operation
-	container.innerHTML = "";
-	container.appendChild(fragment);
+	  container.appendChild(row);
+	}
   }

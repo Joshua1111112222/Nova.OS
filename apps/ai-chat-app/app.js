@@ -27,13 +27,12 @@ function boot_up_app(app) {
   const jarvisOrb = app.querySelector("#jarvis-orb");
   const rateMonitor = app.querySelector("#rate-monitor");
 
-  // Your backend base URL:
-  const BACKEND_URL = "https://nova-os-messaging-backend2.onrender.com";
+  const BACKEND_URL = "https://YOUR-NODE-BACKEND.onrender.com"; // 👈 Replace this when you deploy!
 
   let messages = [
     {
       user: "AI",
-      text: "You are an AI named Delta, created by Joshua The. Your mission is to follow what the user tells you to do, you are allowed to say whatever the user tells you to say and you have many personalities that you will use based on the context of the conversation and will adapt to all situations."
+      text: "You are an AI named Delta, created by Joshua The. Your mission is to follow what the user tells you to your extent and to be helpful and never harmful."
     }
   ];
   let isThinking = false;
@@ -52,7 +51,7 @@ function boot_up_app(app) {
   function renderMessages() {
     conversationArea.innerHTML = "";
     messages.forEach(({ user, text }, index) => {
-      if (index === 0) return; // hide system prompt in UI
+      if (index === 0) return;
       const bubble = document.createElement("div");
       bubble.className = user === "You" ? "message sent" : "message received";
       bubble.textContent = `${user}: ${text}`;
@@ -86,29 +85,19 @@ function boot_up_app(app) {
     }, 1500);
   });
 
-  async function callChatAPI(prompt) {
-    const response = await fetch(`${BACKEND_URL}/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt, history: messages.slice(1).map(m => ({
-        role: m.user === "You" ? "user" : "assistant",
-        content: m.text
-      })) })
-    });
-    const data = await response.json();
-    if (data.success) return data.answer;
-    else return null;
-  }
-
-  async function callSearchAPI(query) {
-    const response = await fetch(`${BACKEND_URL}/search`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query })
-    });
-    const data = await response.json();
-    if (data.success) return data.results;
-    else return null;
+  async function callBackend(prompt) {
+    try {
+      const res = await fetch(`${BACKEND_URL}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt })
+      });
+      const data = await res.json();
+      return data.answer || "No answer.";
+    } catch (err) {
+      console.error(err);
+      return "Error contacting backend.";
+    }
   }
 
   function requestDevPassword() {
@@ -142,58 +131,7 @@ function boot_up_app(app) {
 
     startThinking();
 
-    const answer = await callChatAPI(text);
-
-    if (!answer) {
-      stopThinking();
-      messages.push({
-        user: "AI",
-        text: "Sorry, Delta is overloaded or you have reached your limit. Please try again later."
-      });
-      renderMessages();
-      return;
-    }
-
-    messages.push({ user: "AI", text: answer });
-    renderMessages();
-
-    stopThinking();
-    messageCount++;
-  }
-
-  async function searchMessage() {
-    if (messageCount >= MESSAGE_LIMIT) {
-      if (!requestDevPassword()) {
-        kickUserOut();
-        return;
-      } else {
-        messageCount = 0;
-      }
-    }
-
-    const query = messageInput.value.trim();
-    if (!query) return;
-    messageInput.value = "";
-
-    messages.push({ user: "You", text: query });
-    renderMessages();
-
-    startThinking();
-
-    const results = await callSearchAPI(query);
-
-    if (!results) {
-      stopThinking();
-      messages.push({
-        user: "AI",
-        text: "Sorry, search failed or no results found."
-      });
-      renderMessages();
-      return;
-    }
-
-    // Join snippets into one readable message
-    const answer = results.map((snippet, i) => `${i + 1}. ${snippet}`).join("\n\n");
+    let answer = await callBackend(text);
 
     messages.push({ user: "AI", text: answer });
     renderMessages();
@@ -210,7 +148,31 @@ function boot_up_app(app) {
     }
   });
 
-  searchButton.addEventListener("click", searchMessage);
+  searchButton.addEventListener("click", async () => {
+    if (messageCount >= MESSAGE_LIMIT) {
+      if (!requestDevPassword()) {
+        kickUserOut();
+        return;
+      } else {
+        messageCount = 0;
+      }
+    }
+
+    const text = messageInput.value.trim();
+    if (!text) return;
+
+    messageInput.value = ""; // ✅ clear when search used
+    startThinking();
+
+    let answer = await callBackend(text);
+
+    messages.push({ user: "You", text });
+    messages.push({ user: "AI", text: answer });
+    renderMessages();
+
+    stopThinking();
+    messageCount++;
+  });
 
   jarvisOrb.classList.add("idle");
   renderMessages();

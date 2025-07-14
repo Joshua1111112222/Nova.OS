@@ -186,33 +186,49 @@ function boot_up_app(app) {
         messageCount = 0;
       }
     }
-
+  
     const text = messageInput.value.trim();
     if (!text) return;
-
+  
+    // Clear input on search click
+    messageInput.value = "";
+  
     startThinking();
-
-    const searchPrompt = `Use your grounded search and up-to-date knowledge to answer: "${text}"`;
-    let answer = await callGeminiAPI(searchPrompt);
-
-    if (!answer) {
-      stopThinking();
-      messages.push({
-        user: "AI",
-        text: "Sorry, Delta is overloaded or you have reached your limit. Please try again later."
-      });
+  
+    // ✅ Do a real web search
+    try {
+      const searchResponse = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(text)}&format=json&no_html=1&skip_disambig=1`);
+      const searchData = await searchResponse.json();
+  
+      let results = searchData?.AbstractText || "No results found.";
+      if (searchData.RelatedTopics && searchData.RelatedTopics.length > 0) {
+        results += "\n\nSome related topics:\n";
+        results += searchData.RelatedTopics.slice(0, 3).map(t => `- ${t.Text}`).join("\n");
+      }
+  
+      // Optionally ask Gemini to refine
+      const finalPrompt = `Here is the user's question: "${text}". Here are some quick web results:\n${results}\n\nPlease give a clear, helpful answer.`;
+  
+      let finalAnswer = await callGeminiAPI(finalPrompt);
+  
+      if (!finalAnswer) {
+        finalAnswer = `I found this from the web:\n${results}`;
+      }
+  
+      messages.push({ user: "You", text });
+      messages.push({ user: "AI", text: finalAnswer });
       renderMessages();
-      return;
+  
+    } catch (err) {
+      console.error("Search error:", err);
+      messages.push({ user: "AI", text: "Sorry, the web search failed. Please try again later." });
+      renderMessages();
     }
-
-    messages.push({ user: "You", text });
-    messages.push({ user: "AI", text: answer });
-    renderMessages();
-
+  
     stopThinking();
     messageCount++;
   });
-
+  
   jarvisOrb.classList.add("idle");
   renderMessages();
 }

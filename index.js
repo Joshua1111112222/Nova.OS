@@ -91,23 +91,16 @@ function loadHome() {
 	const container = document.querySelector(containerSelector);
 	if (!container) return;
   
-	// Add or update CSS styles dynamically
-	let style = document.getElementById('app-grid-style');
-	if (!style) {
-	  style = document.createElement('style');
-	  style.id = 'app-grid-style';
-	  document.head.appendChild(style);
-	}
+	// Add CSS styles dynamically with !important to override existing styles
+	const style = document.createElement('style');
 	style.textContent = `
 	  ${containerSelector} {
 		width: 100% !important;
 		display: flex !important;
 		flex-direction: column !important;
 		padding: 10px !important;
-		margin-top: 20px !important;
+		margin-top: 20px !important; /* Move the top row down slightly */
 		box-sizing: border-box !important;
-		position: relative !important;
-		z-index: 1 !important;
 	  }
 	  ${containerSelector} .app-row {
 		width: 100% !important;
@@ -116,57 +109,35 @@ function loadHome() {
 		gap: 10px !important;
 		margin-bottom: 10px !important;
 		box-sizing: border-box !important;
-		position: relative !important;
-	  }
-	  ${containerSelector} .app-row:first-child {
-		padding-top: 10px !important;
 	  }
 	  ${containerSelector} .app-icon {
-		aspect-ratio: 1 / 1 !important;
+		aspect-ratio: 1/1 !important;
 		display: flex !important;
 		align-items: center !important;
 		justify-content: center !important;
 		width: 100% !important;
 		box-sizing: border-box !important;
-		cursor: pointer !important;
+		cursor: pointer !important; /* Ensure apps are clickable */
 		position: relative !important;
 		z-index: 10 !important;
 		pointer-events: auto !important;
 	  }
 	  ${containerSelector} .app-spacer {
 		visibility: hidden !important;
-		aspect-ratio: 1 / 1 !important;
-		pointer-events: none !important;
+		aspect-ratio: 1/1 !important;
 	  }
 	`;
+	document.head.appendChild(style);
   
 	// Collect all app elements that should be wrapped
 	const apps = [];
 	const children = Array.from(container.children);
-	children.forEach(child => {
-	  if (
-		child.classList?.contains('app-icon') ||
-		child.hasAttribute?.('app-name') ||
-		child.tagName?.toLowerCase().includes('app')
-	  ) {
-		apps.push(child);
-	  }
-	});
   
-	// Attach click and touch event listeners to apps
-	apps.forEach(app => {
-	  const appName = app.getAttribute('app-name');
-	  if (appName) {
-		// Remove previous listeners by cloning to avoid duplicates (optional)
-		// Or just add listeners directly if you ensure this runs once per load
-		app.addEventListener('click', e => {
-		  e.preventDefault();
-		  app_handler.openApp(appName);
-		});
-		app.addEventListener('touchstart', e => {
-		  e.preventDefault();
-		  app_handler.openApp(appName);
-		});
+	children.forEach(child => {
+	  if (child.classList?.contains('app-icon') || 
+		  child.hasAttribute?.('app-name') ||
+		  child.tagName?.toLowerCase().includes('app')) {
+		apps.push(child);
 	  }
 	});
   
@@ -175,31 +146,38 @@ function loadHome() {
   
 	// Create rows and append apps
 	for (let i = 0; i < apps.length; i += appsPerRow) {
-	  const row = document.createElement('div');
-	  row.className = 'app-row';
+	  const row = document.createElement("div");
+	  row.className = "app-row";
   
+	  // Get apps for this row
 	  const rowApps = apps.slice(i, i + appsPerRow);
   
+	  // Add apps to row
 	  rowApps.forEach(app => {
+		// Ensure app has proper styling
 		app.style.gridColumn = 'auto';
 		app.style.width = '100%';
 		app.style.boxSizing = 'border-box';
-		app.style.position = 'relative';
-		app.style.zIndex = '10';
-		app.style.pointerEvents = 'auto';
+  
+		// Reattach event listeners to ensure apps are clickable
+		const appName = app.getAttribute('app-name');
+		if (appName) {
+		  app.addEventListener('click', () => {
+			app_handler.openApp(appName); // Ensure the app opens correctly
+		  });
+		}
   
 		row.appendChild(app);
 	  });
   
-	  // Fill remaining slots with spacers to keep grid aligned
+	  // Fill remaining slots with spacers to maintain grid alignment
 	  const remainingSlots = appsPerRow - rowApps.length;
 	  for (let j = 0; j < remainingSlots; j++) {
-		const spacer = document.createElement('div');
-		spacer.className = 'app-spacer';
+		const spacer = document.createElement("div");
+		spacer.className = "app-spacer";
 		row.appendChild(spacer);
 	  }
   
 	  container.appendChild(row);
 	}
   }
-  

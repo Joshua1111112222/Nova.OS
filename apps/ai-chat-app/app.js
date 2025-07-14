@@ -27,7 +27,7 @@ function boot_up_app(app) {
   const jarvisOrb = app.querySelector("#jarvis-orb");
   const rateMonitor = app.querySelector("#rate-monitor");
 
-  const BACKEND_URL = "https://YOUR-NODE-BACKEND.onrender.com"; // 👈 Replace this when you deploy!
+  const BACKEND_URL = "https://delta-backend-223m.onrender.com"; // 👈 Replace this when you deploy!
 
   let messages = [
     {

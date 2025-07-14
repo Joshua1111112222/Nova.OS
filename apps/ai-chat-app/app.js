@@ -27,17 +27,13 @@ function boot_up_app(app) {
   const jarvisOrb = app.querySelector("#jarvis-orb");
   const rateMonitor = app.querySelector("#rate-monitor");
 
-  // ✅ Hardcoded Gemini API key
-  const GEMINI_API_KEY = "AIzaSyDZ3TDPwMoLQbMh1f3ZFc2a_ZacBc_ztUw";
-  const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
-
-  // ✅ SerpAPI Key
-  const SERP_API_KEY = "0dd6ee00a8f8b474900801f4160a02bdda8e91b3d6dab024b09b62b9d1577c25";
+  // Your backend base URL:
+  const BACKEND_URL = "https://nova-os-messaging-backend2.onrender.com";
 
   let messages = [
     {
       user: "AI",
-      text: "You are an AI named Delta, created by Joshua The. Your mission is to follow what the user tells you to do and to always be accurate. Your personality can be funny or mad or helpful or sad any personality you think the user would want from you."
+      text: "You are an AI named Delta, created by Joshua The. Your mission is to follow what the user tells you to your extent and to be helpful and never harmful."
     }
   ];
   let isThinking = false;
@@ -90,59 +86,29 @@ function boot_up_app(app) {
     }, 1500);
   });
 
-  async function callGeminiAPI(prompt) {
-    const history = messages.map(m => ({
-      role: m.user === "You" ? "user" : "model",
-      parts: [{ text: m.text }]
-    }));
-
-    const requestOptions = {
+  async function callChatAPI(prompt) {
+    const response = await fetch(`${BACKEND_URL}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          ...history,
-          { role: "user", parts: [{ text: prompt }] }
-        ]
-      }),
-    };
-
-    try {
-      const response = await fetch(GEMINI_URL, requestOptions);
-      const data = await response.json();
-      if (data.error) {
-        console.error("Gemini API error:", data.error);
-        return null;
-      }
-      let answer = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      return answer.trim();
-    } catch (err) {
-      console.error("Gemini API error:", err);
-      return null;
-    }
+      body: JSON.stringify({ prompt, history: messages.slice(1).map(m => ({
+        role: m.user === "You" ? "user" : "assistant",
+        content: m.text
+      })) })
+    });
+    const data = await response.json();
+    if (data.success) return data.answer;
+    else return null;
   }
 
-  async function searchWithSerpAPI(query) {
-    const params = new URLSearchParams({
-      engine: "google",
-      q: query,
-      api_key: SERP_API_KEY
+  async function callSearchAPI(query) {
+    const response = await fetch(`${BACKEND_URL}/search`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query })
     });
-
-    try {
-      const response = await fetch(`https://serpapi.com/search.json?${params}`);
-      const data = await response.json();
-      console.log("SerpAPI:", data);
-
-      if (data.organic_results && data.organic_results.length > 0) {
-        return data.organic_results[0].snippet || "No snippet found.";
-      } else {
-        return "No results found.";
-      }
-    } catch (err) {
-      console.error("SerpAPI error:", err);
-      return "Search failed. Please try again.";
-    }
+    const data = await response.json();
+    if (data.success) return data.results;
+    else return null;
   }
 
   function requestDevPassword() {
@@ -176,7 +142,7 @@ function boot_up_app(app) {
 
     startThinking();
 
-    let answer = await callGeminiAPI(text);
+    const answer = await callChatAPI(text);
 
     if (!answer) {
       stopThinking();
@@ -195,15 +161,7 @@ function boot_up_app(app) {
     messageCount++;
   }
 
-  sendButton.addEventListener("click", sendMessage);
-  messageInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  });
-
-  searchButton.addEventListener("click", async () => {
+  async function searchMessage() {
     if (messageCount >= MESSAGE_LIMIT) {
       if (!requestDevPassword()) {
         kickUserOut();
@@ -213,22 +171,46 @@ function boot_up_app(app) {
       }
     }
 
-    const text = messageInput.value.trim();
-    if (!text) return;
+    const query = messageInput.value.trim();
+    if (!query) return;
+    messageInput.value = "";
 
-    messageInput.value = ""; // ✅ Clear input when using search
+    messages.push({ user: "You", text: query });
+    renderMessages();
 
     startThinking();
 
-    let webAnswer = await searchWithSerpAPI(text);
+    const results = await callSearchAPI(query);
 
-    messages.push({ user: "You", text });
-    messages.push({ user: "AI", text: webAnswer });
+    if (!results) {
+      stopThinking();
+      messages.push({
+        user: "AI",
+        text: "Sorry, search failed or no results found."
+      });
+      renderMessages();
+      return;
+    }
+
+    // Join snippets into one readable message
+    const answer = results.map((snippet, i) => `${i + 1}. ${snippet}`).join("\n\n");
+
+    messages.push({ user: "AI", text: answer });
     renderMessages();
 
     stopThinking();
     messageCount++;
+  }
+
+  sendButton.addEventListener("click", sendMessage);
+  messageInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
   });
+
+  searchButton.addEventListener("click", searchMessage);
 
   jarvisOrb.classList.add("idle");
   renderMessages();

@@ -156,6 +156,19 @@ export const styling = html`
 		* {
 			touch-action:none;
 		}
+
+		app-main {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem; /* space between apps, adjust as needed */
+  justify-content: flex-start; /* align to left, wrap naturally */
+}
+
+app-main app {
+  flex: 0 0 calc(20% - 1rem); /* 5 per row max, minus gap */
+  box-sizing: border-box;
+}
+
 	</style>
 `
 _(styling)

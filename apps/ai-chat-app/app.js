@@ -27,7 +27,7 @@ function boot_up_app(app) {
   const jarvisOrb = app.querySelector("#jarvis-orb");
   const rateMonitor = app.querySelector("#rate-monitor");
 
-  const BACKEND_URL = "https://delta-backend-223m.onrender.com"; // 👈 Replace this when you deploy!
+  const BACKEND_URL = "https://delta-backend-223m.onrender.com";
 
   let messages = [
     {
@@ -87,13 +87,14 @@ function boot_up_app(app) {
 
   async function callBackend(prompt) {
     try {
-      const res = await fetch(`${BACKEND_URL}/chat`, {
+      const res = await fetch(`${BACKEND_URL}/api/gemini`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt })
       });
       const data = await res.json();
-      return data.answer || "No answer.";
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      return text || "No answer.";
     } catch (err) {
       console.error(err);
       return "Error contacting backend.";

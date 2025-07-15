@@ -95,21 +95,45 @@ function boot_up_app(app) {
   }];
 
   // UI Functions
-  function renderMessages() {
-    conversationArea.innerHTML = "";
-    messages.forEach((msg, index) => {
-      if (index === 0) return; // Skip system message
-      
-      const bubble = document.createElement("div");
-      bubble.className = `message ${msg.user.toLowerCase()} ${msg.user === "System" ? "system" : ""}`;
-      bubble.innerHTML = `
-        <strong>${msg.user}:</strong> ${msg.text}
-        ${msg.sources ? `<div class="sources">Sources: ${msg.sources.join(', ')}</div>` : ''}
-      `;
-      conversationArea.appendChild(bubble);
-    });
-    conversationArea.scrollTop = conversationArea.scrollHeight;
-  }
+  // Replace your renderMessages function with this:
+function renderMessages() {
+  conversationArea.innerHTML = "";
+  messages.forEach((msg, index) => {
+    if (index === 0) return; // Skip system message
+    
+    const bubble = document.createElement("div");
+    
+    // Use the correct class names that match your CSS
+    let messageClass = "message";
+    if (msg.user === "You") {
+      messageClass += " sent";  // This matches .message.sent in your CSS
+    } else if (msg.user === "AI") {
+      messageClass += " received";  // This matches .message.received in your CSS
+    } else if (msg.user === "System") {
+      messageClass += " system";
+    }
+    
+    bubble.className = messageClass;
+    
+    // For user messages, don't show "You:" since it's obvious from styling
+    // For AI messages, you can show "AI:" or remove it since styling makes it clear
+    if (msg.user === "You") {
+      bubble.innerHTML = msg.text;
+    } else if (msg.user === "AI") {
+      bubble.innerHTML = msg.text;  // Remove "AI:" prefix since styling makes it clear
+    } else {
+      bubble.innerHTML = `<strong>${msg.user}:</strong> ${msg.text}`;
+    }
+    
+    // Add sources if they exist
+    if (msg.sources && msg.sources.length > 0) {
+      bubble.innerHTML += `<div class="sources" style="margin-top: 8px; font-size: 0.8em; opacity: 0.7;">Sources: ${msg.sources.join(', ')}</div>`;
+    }
+    
+    conversationArea.appendChild(bubble);
+  });
+  conversationArea.scrollTop = conversationArea.scrollHeight;
+}
 
   function setThinking(state) {
     isThinking = state;

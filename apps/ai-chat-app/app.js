@@ -12,7 +12,6 @@ export const app = _component("ai-chat-app", html`
     <div id="rate-monitor">Your rates are being monitored</div>
 
     <input-area>
-      <button id="searchButton" title="Search">&#128269;</button>
       <textarea id="messageInput" placeholder="Type a message..." autocomplete="off" rows="1"></textarea>
       <button id="sendButton">Send</button>
     </input-area>
@@ -23,7 +22,6 @@ function boot_up_app(app) {
   const conversationArea = app.querySelector("conversation-area");
   const messageInput = app.querySelector("#messageInput");
   const sendButton = app.querySelector("#sendButton");
-  const searchButton = app.querySelector("#searchButton");
   const jarvisOrb = app.querySelector("#jarvis-orb");
   const rateMonitor = app.querySelector("#rate-monitor");
 
@@ -87,14 +85,13 @@ function boot_up_app(app) {
 
   async function callBackend(prompt) {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/gemini`, {
+      const res = await fetch(`${BACKEND_URL}/api/smart-gemini`, {  // Updated endpoint
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt })
       });
       const data = await res.json();
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      return text || "No answer.";
+      return data.answer || "No answer.";
     } catch (err) {
       console.error(err);
       return "Error contacting backend.";
@@ -111,7 +108,6 @@ function boot_up_app(app) {
     renderMessages();
     messageInput.disabled = true;
     sendButton.disabled = true;
-    searchButton.disabled = true;
   }
 
   async function sendMessage() {
@@ -147,32 +143,6 @@ function boot_up_app(app) {
       e.preventDefault();
       sendMessage();
     }
-  });
-
-  searchButton.addEventListener("click", async () => {
-    if (messageCount >= MESSAGE_LIMIT) {
-      if (!requestDevPassword()) {
-        kickUserOut();
-        return;
-      } else {
-        messageCount = 0;
-      }
-    }
-
-    const text = messageInput.value.trim();
-    if (!text) return;
-
-    messageInput.value = ""; // ✅ clear when search used
-    startThinking();
-
-    let answer = await callBackend(text);
-
-    messages.push({ user: "You", text });
-    messages.push({ user: "AI", text: answer });
-    renderMessages();
-
-    stopThinking();
-    messageCount++;
   });
 
   jarvisOrb.classList.add("idle");

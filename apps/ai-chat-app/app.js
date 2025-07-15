@@ -3,30 +3,61 @@ export const app_name = "ai-chat-app";
 export const app = _component("ai-chat-app", html`
   <link rel="stylesheet" type="text/css" href="./apps/ai-chat-app/styles.css" />
   <style>
-    /* System message styling */
-    .message.system {
-      color: #666;
-      font-style: italic;
-      font-size: 0.9em;
-      margin: 8px 0;
-      padding: 8px 12px;
-      background: rgba(0,0,0,0.05);
-      border-radius: 12px;
-    }
-    
-    /* Animation styles */
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    #jarvis-orb.thinking {
-      animation: spin 1.5s linear infinite;
-    }
-    #searchToggle.active {
-      background: rgba(0, 120, 255, 0.1);
-      color: #0078ff;
-    }
-  </style>
+   /* Replace your inline <style> section with this: */
+<style>
+  /* System message styling - properly styled for dark theme */
+  .message.system {
+    color: #bbb;  /* Light gray for dark theme */
+    font-style: italic;
+    font-size: 0.9em;
+    margin: 8px 0;
+    padding: 8px 12px;
+    background: rgba(255,255,255,0.1);  /* Light overlay for dark theme */
+    border-radius: 12px;
+    border-left: 3px solid #5e9cff;  /* Blue accent to match your theme */
+    align-self: center;
+    max-width: 90%;
+  }
+  
+  /* Animation styles */
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  #jarvis-orb.thinking {
+    animation: spin 1.5s linear infinite;
+  }
+  
+  #searchToggle {
+    background: #2a2a2a;
+    color: #eee;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 16px;
+  }
+  
+  #searchToggle:hover {
+    background: #333;
+    border-color: #5e9cff;
+  }
+  
+  #searchToggle.active {
+    background: rgba(94, 156, 255, 0.2);
+    color: #5e9cff;
+    border-color: #5e9cff;
+  }
+  
+  /* Make sure sources are visible */
+  .sources {
+    color: #999;
+    font-size: 0.8em;
+    margin-top: 8px;
+  }
+</style>
 
   <main-area>
     <header-title>AI Chat</header-title>

@@ -2,70 +2,17 @@ export const app_name = "ai-chat-app";
 
 export const app = _component("ai-chat-app", html`
   <link rel="stylesheet" type="text/css" href="./apps/ai-chat-app/styles.css" />
-  <style>
-   /* Replace your inline <style> section with this: */
-<style>
-  /* System message styling - properly styled for dark theme */
-  .message.system {
-    color: #bbb;  /* Light gray for dark theme */
-    font-style: italic;
-    font-size: 0.9em;
-    margin: 8px 0;
-    padding: 8px 12px;
-    background: rgba(255,255,255,0.1);  /* Light overlay for dark theme */
-    border-radius: 12px;
-    border-left: 3px solid #5e9cff;  /* Blue accent to match your theme */
-    align-self: center;
-    max-width: 90%;
-  }
-  
-  /* Animation styles */
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-  
-  #jarvis-orb.thinking {
-    animation: spin 1.5s linear infinite;
-  }
-  
-  #searchToggle {
-    background: #2a2a2a;
-    color: #eee;
-    border: 1px solid #444;
-    border-radius: 8px;
-    padding: 8px 12px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-size: 16px;
-  }
-  
-  #searchToggle:hover {
-    background: #333;
-    border-color: #5e9cff;
-  }
-  
-  #searchToggle.active {
-    background: rgba(94, 156, 255, 0.2);
-    color: #5e9cff;
-    border-color: #5e9cff;
-  }
-  
-  /* Make sure sources are visible */
-  .sources {
-    color: #999;
-    font-size: 0.8em;
-    margin-top: 8px;
-  }
-</style>
 
   <main-area>
     <header-title>AI Chat</header-title>
+
     <conversation-area></conversation-area>
+
     <div id="jarvis-orb" class="idle"></div>
     <div id="rate-monitor">Your rates are being monitored</div>
+
     <input-area>
-      <button id="searchToggle" title="Enable web search">🌐</button>
+      <button id="searchButton" title="Search">&#128269;</button>
       <textarea id="messageInput" placeholder="Type a message..." autocomplete="off" rows="1"></textarea>
       <button id="sendButton">Send</button>
     </input-area>
@@ -73,165 +20,180 @@ export const app = _component("ai-chat-app", html`
 `, boot_up_app);
 
 function boot_up_app(app) {
-  // DOM Elements
   const conversationArea = app.querySelector("conversation-area");
   const messageInput = app.querySelector("#messageInput");
   const sendButton = app.querySelector("#sendButton");
-  const searchToggle = app.querySelector("#searchToggle");
+  const searchButton = app.querySelector("#searchButton");
   const jarvisOrb = app.querySelector("#jarvis-orb");
   const rateMonitor = app.querySelector("#rate-monitor");
 
-  // Configuration
-  const BACKEND_URL = "https://delta-backend-223m.onrender.com";
-  const MESSAGE_LIMIT = 10;
-  let messageCount = 0;
-  let isSearchMode = false;
+  // ✅ Hardcoded Gemini API key
+  const GEMINI_API_KEY = "AIzaSyDZ3TDPwMoLQbMh1f3ZFc2a_ZacBc_ztUw";
+  const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+  // ✅ SerpAPI Key
+  const SERP_API_KEY = "0dd6ee00a8f8b474900801f4160a02bdda8e91b3d6dab024b09b62b9d1577c25";
+
+  let messages = [
+    {
+      user: "AI",
+      text: "You are an AI named Delta, created by Joshua The. Your mission is to follow what the user tells you to do and to always be accurate. Your personality can be funny or mad or helpful or sad any personality you think the user would want from you."
+    }
+  ];
   let isThinking = false;
 
-  // Chat History
-  let messages = [{
-    user: "AI",
-    text: "You are Delta, an AI created by Joshua The. Your mission is to follow what the user tells you to your full capability, adapting to any situation while remaining helpful and never harmful."
-  }];
+  const MESSAGE_LIMIT = 10;
+  let messageCount = 0;
 
-  // UI Functions
-  // Replace your renderMessages function with this:
-function renderMessages() {
-  conversationArea.innerHTML = "";
-  messages.forEach((msg, index) => {
-    if (index === 0) return; // Skip system message
-    
-    const bubble = document.createElement("div");
-    
-    // Use the correct class names that match your CSS
-    let messageClass = "message";
-    if (msg.user === "You") {
-      messageClass += " sent";  // This matches .message.sent in your CSS
-    } else if (msg.user === "AI") {
-      messageClass += " received";  // This matches .message.received in your CSS
-    } else if (msg.user === "System") {
-      messageClass += " system";
-    }
-    
-    bubble.className = messageClass;
-    
-    // For user messages, don't show "You:" since it's obvious from styling
-    // For AI messages, you can show "AI:" or remove it since styling makes it clear
-    if (msg.user === "You") {
-      bubble.innerHTML = msg.text;
-    } else if (msg.user === "AI") {
-      bubble.innerHTML = msg.text;  // Remove "AI:" prefix since styling makes it clear
-    } else {
-      bubble.innerHTML = `<strong>${msg.user}:</strong> ${msg.text}`;
-    }
-    
-    // Add sources if they exist
-    if (msg.sources && msg.sources.length > 0) {
-      bubble.innerHTML += `<div class="sources" style="margin-top: 8px; font-size: 0.8em; opacity: 0.7;">Sources: ${msg.sources.join(', ')}</div>`;
-    }
-    
-    conversationArea.appendChild(bubble);
+  rateMonitor.style.position = "fixed";
+  rateMonitor.style.top = "10px";
+  rateMonitor.style.right = "10px";
+  rateMonitor.style.fontSize = "12px";
+  rateMonitor.style.color = "#888";
+  rateMonitor.style.userSelect = "none";
+  rateMonitor.style.opacity = "0.6";
+
+  function renderMessages() {
+    conversationArea.innerHTML = "";
+    messages.forEach(({ user, text }, index) => {
+      if (index === 0) return; // hide system prompt in UI
+      const bubble = document.createElement("div");
+      bubble.className = user === "You" ? "message sent" : "message received";
+      bubble.textContent = `${user}: ${text}`;
+      conversationArea.appendChild(bubble);
+    });
+    conversationArea.scrollTop = conversationArea.scrollHeight;
+  }
+
+  function startThinking() {
+    isThinking = true;
+    jarvisOrb.classList.add("thinking");
+    jarvisOrb.classList.remove("idle", "typing");
+  }
+
+  function stopThinking() {
+    isThinking = false;
+    jarvisOrb.classList.remove("thinking", "typing");
+    jarvisOrb.classList.add("idle");
+  }
+
+  messageInput.addEventListener("input", () => {
+    if (isThinking) return;
+    jarvisOrb.classList.add("typing");
+    jarvisOrb.classList.remove("idle", "thinking");
+    clearTimeout(jarvisOrb.typingTimeout);
+    jarvisOrb.typingTimeout = setTimeout(() => {
+      if (!isThinking) {
+        jarvisOrb.classList.remove("typing");
+        jarvisOrb.classList.add("idle");
+      }
+    }, 1500);
   });
-  conversationArea.scrollTop = conversationArea.scrollHeight;
-}
 
-  function setThinking(state) {
-    isThinking = state;
-    jarvisOrb.className = state ? "thinking" : "idle";
-    sendButton.disabled = state;
-    searchToggle.disabled = state;
-  }
+  async function callGeminiAPI(prompt) {
+    const history = messages.map(m => ({
+      role: m.user === "You" ? "user" : "model",
+      parts: [{ text: m.text }]
+    }));
 
-  // API Functions
-  async function callBackend(prompt) {
-    const endpoint = isSearchMode ? "/api/gemini-with-search" : "/api/gemini";
-    
+    const requestOptions = {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [
+          ...history,
+          { role: "user", parts: [{ text: prompt }] }
+        ]
+      }),
+    };
+
     try {
-      const response = await fetch(`${BACKEND_URL}${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt })
-      });
-      
-      if (!response.ok) throw new Error("API error");
-      return await response.json();
-    } catch (error) {
-      console.error("API Error:", error);
-      return { answer: "Sorry, I encountered an error. Please try again.", sources: [] };
+      const response = await fetch(GEMINI_URL, requestOptions);
+      const data = await response.json();
+      if (data.error) {
+        console.error("Gemini API error:", data.error);
+        return null;
+      }
+      let answer = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      return answer.trim();
+    } catch (err) {
+      console.error("Gemini API error:", err);
+      return null;
     }
   }
 
-  // Message Handling
+  async function searchWithSerpAPI(query) {
+    const params = new URLSearchParams({
+      engine: "google",
+      q: query,
+      api_key: SERP_API_KEY
+    });
+
+    try {
+      const response = await fetch(`https://serpapi.com/search.json?${params}`);
+      const data = await response.json();
+      console.log("SerpAPI:", data);
+
+      if (data.organic_results && data.organic_results.length > 0) {
+        return data.organic_results[0].snippet || "No snippet found.";
+      } else {
+        return "No results found.";
+      }
+    } catch (err) {
+      console.error("SerpAPI error:", err);
+      return "Search failed. Please try again.";
+    }
+  }
+
+  function requestDevPassword() {
+    const input = prompt("You have reached your message limit. Please enter the dev password to continue:");
+    return input === "Cedar Point Ahh";
+  }
+
+  function kickUserOut() {
+    messages = [{ user: "AI", text: "Access denied. You have been logged out of AI chat." }];
+    renderMessages();
+    messageInput.disabled = true;
+    sendButton.disabled = true;
+    searchButton.disabled = true;
+  }
+
   async function sendMessage() {
-    // Rate limiting
-    if (messageCount >= MESSAGE_LIMIT && !requestDevPassword()) {
-      kickUserOut();
-      return;
+    if (messageCount >= MESSAGE_LIMIT) {
+      if (!requestDevPassword()) {
+        kickUserOut();
+        return;
+      } else {
+        messageCount = 0;
+      }
     }
 
     const text = messageInput.value.trim();
     if (!text) return;
-
-    // Prepare UI
     messageInput.value = "";
     messages.push({ user: "You", text });
     renderMessages();
-    setThinking(true);
 
-    // Add searching indicator if needed
-    let searchMessageIndex = null;
-    if (isSearchMode) {
-      searchMessageIndex = messages.length;
-      messages.push({ 
-        user: "System", 
-        text: "🔍 Searching for current information...",
-        isTemp: true
+    startThinking();
+
+    let answer = await callGeminiAPI(text);
+
+    if (!answer) {
+      stopThinking();
+      messages.push({
+        user: "AI",
+        text: "Sorry, Delta is overloaded or you have reached your limit. Please try again later."
       });
       renderMessages();
+      return;
     }
 
-    // Get response
-    const { answer, sources } = await callBackend(text);
-    
-    // Remove temporary search message if it exists
-    if (searchMessageIndex !== null) {
-      messages = messages.filter((_, i) => i !== searchMessageIndex);
-    }
-    
-    // Add AI response
-    messages.push({ 
-      user: "AI", 
-      text: answer,
-      sources: sources || []
-    });
-    
-    // Clean up
-    setThinking(false);
-    searchToggle.classList.remove("active");
-    isSearchMode = false;
+    messages.push({ user: "AI", text: answer });
+    renderMessages();
+
+    stopThinking();
     messageCount++;
-    renderMessages();
   }
-
-  // Helper Functions
-  function requestDevPassword() {
-    return prompt("Enter dev password to continue:") === "Cedar Point Ahh";
-  }
-
-  function kickUserOut() {
-    messages.push({ user: "AI", text: "Access denied. You have been logged out." });
-    renderMessages();
-    messageInput.disabled = true;
-    sendButton.disabled = true;
-    searchToggle.disabled = true;
-  }
-
-  // Event Listeners
-  searchToggle.addEventListener("click", () => {
-    isSearchMode = !isSearchMode;
-    searchToggle.classList.toggle("active", isSearchMode);
-    messageInput.focus();
-  });
 
   sendButton.addEventListener("click", sendMessage);
   messageInput.addEventListener("keydown", (e) => {
@@ -241,6 +203,33 @@ function renderMessages() {
     }
   });
 
-  // Initialize
+  searchButton.addEventListener("click", async () => {
+    if (messageCount >= MESSAGE_LIMIT) {
+      if (!requestDevPassword()) {
+        kickUserOut();
+        return;
+      } else {
+        messageCount = 0;
+      }
+    }
+
+    const text = messageInput.value.trim();
+    if (!text) return;
+
+    messageInput.value = ""; // ✅ Clear input when using search
+
+    startThinking();
+
+    let webAnswer = await searchWithSerpAPI(text);
+
+    messages.push({ user: "You", text });
+    messages.push({ user: "AI", text: webAnswer });
+    renderMessages();
+
+    stopThinking();
+    messageCount++;
+  });
+
+  jarvisOrb.classList.add("idle");
   renderMessages();
 }
